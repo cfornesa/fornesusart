@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Block direct HTTP access to sensitive files
+<FilesMatch "^\.env$|^schema\.sql$|^migrate.*\.sql$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+RewriteRule ^(.*)$ public/$1 [L]

@@ -1,0 +1,113 @@
+<?php
+
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/app/bootstrap.php';
+require dirname(__DIR__) . '/app/helpers/auth.php';
+require dirname(__DIR__) . '/app/models/MediaFile.php';
+require dirname(__DIR__) . '/app/helpers/upload.php';
+require dirname(__DIR__) . '/app/helpers/slugify.php';
+require dirname(__DIR__) . '/app/models/Category.php';
+require dirname(__DIR__) . '/app/models/Artwork.php';
+require dirname(__DIR__) . '/app/models/Exhibit.php';
+require dirname(__DIR__) . '/app/models/BioSection.php';
+require dirname(__DIR__) . '/app/controllers/GalleryController.php';
+require dirname(__DIR__) . '/app/controllers/WorkController.php';
+require dirname(__DIR__) . '/app/controllers/AboutController.php';
+require dirname(__DIR__) . '/app/controllers/CategoriesController.php';
+require dirname(__DIR__) . '/app/controllers/ExhibitController.php';
+require dirname(__DIR__) . '/app/controllers/AdminController.php';
+
+$uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$method = $_SERVER['REQUEST_METHOD'];
+
+// Strip trailing slash except root
+if ($uri !== '/' && str_ends_with($uri, '/')) {
+    header('Location: ' . rtrim($uri, '/'), true, 301);
+    exit;
+}
+
+// Route table
+$routes = [
+    // Public
+    ['GET',  '/',                              [GalleryController::class,    'index']],
+    ['GET',  '/categories',                    [CategoriesController::class, 'index']],
+    ['GET',  '/category/([a-z0-9-]+)',         [CategoriesController::class, 'show']],
+    ['GET',  '/exhibit/([a-z0-9-]+)',          [ExhibitController::class,    'show']],
+    ['GET',  '/about',                         [AboutController::class,      'index']],
+    ['POST', '/about',                         [AboutController::class,      'contact']],
+    ['GET',  '/work/([a-z0-9-]+)',             [WorkController::class,       'show']],
+
+    // Admin auth
+    ['GET',  '/admin',                         [AdminController::class, 'dashboard']],
+    ['GET',  '/admin/login',                   [AdminController::class, 'loginForm']],
+    ['POST', '/admin/login',                   [AdminController::class, 'loginSubmit']],
+    ['GET',  '/admin/logout',                  [AdminController::class, 'logout']],
+
+    // Admin artworks
+    ['GET',  '/admin/artworks',                [AdminController::class, 'artworksIndex']],
+    ['GET',  '/admin/artworks/create',         [AdminController::class, 'artworkCreate']],
+    ['POST', '/admin/artworks/create',         [AdminController::class, 'artworkStore']],
+    ['GET',  '/admin/artworks/([0-9]+)/edit',  [AdminController::class, 'artworkEdit']],
+    ['POST', '/admin/artworks/([0-9]+)/edit',  [AdminController::class, 'artworkUpdate']],
+    ['POST', '/admin/artworks/([0-9]+)/delete',[AdminController::class, 'artworkDelete']],
+    ['POST', '/admin/artworks/([0-9]+)/order', [AdminController::class, 'artworkOrder']],
+    ['POST', '/admin/artworks/reorder',        [AdminController::class, 'artworkReorder']],
+
+    // Admin categories
+    ['GET',  '/admin/categories',                      [AdminController::class, 'categoriesIndex']],
+    ['GET',  '/admin/categories/create',               [AdminController::class, 'categoryCreate']],
+    ['POST', '/admin/categories/create',               [AdminController::class, 'categoryStore']],
+    ['GET',  '/admin/categories/([0-9]+)/edit',        [AdminController::class, 'categoryEdit']],
+    ['POST', '/admin/categories/([0-9]+)/edit',        [AdminController::class, 'categoryUpdate']],
+    ['POST', '/admin/categories/([0-9]+)/delete',      [AdminController::class, 'categoryDelete']],
+    ['POST', '/admin/categories/reorder',              [AdminController::class, 'categoryReorder']],
+
+    // Admin exhibits
+    ['GET',  '/admin/exhibits',                        [AdminController::class, 'exhibitsIndex']],
+    ['GET',  '/admin/exhibits/create',                 [AdminController::class, 'exhibitCreate']],
+    ['POST', '/admin/exhibits/create',                 [AdminController::class, 'exhibitStore']],
+    ['GET',  '/admin/exhibits/([0-9]+)/edit',          [AdminController::class, 'exhibitEdit']],
+    ['POST', '/admin/exhibits/([0-9]+)/edit',          [AdminController::class, 'exhibitUpdate']],
+    ['POST', '/admin/exhibits/([0-9]+)/delete',        [AdminController::class, 'exhibitDelete']],
+    ['POST', '/admin/exhibits/reorder',                [AdminController::class, 'exhibitReorder']],
+
+    // Admin bio
+    ['GET',  '/admin/bio',                             [AdminController::class, 'bioIndex']],
+    ['GET',  '/admin/bio/create',                      [AdminController::class, 'bioCreate']],
+    ['POST', '/admin/bio/create',                      [AdminController::class, 'bioStore']],
+    ['GET',  '/admin/bio/([0-9]+)/edit',               [AdminController::class, 'bioEdit']],
+    ['POST', '/admin/bio/([0-9]+)/edit',               [AdminController::class, 'bioUpdate']],
+    ['POST', '/admin/bio/([0-9]+)/delete',             [AdminController::class, 'bioDelete']],
+    ['POST', '/admin/bio/reorder',                     [AdminController::class, 'bioReorder']],
+
+    // Admin messages
+    ['GET',  '/admin/messages',                        [AdminController::class, 'messagesIndex']],
+
+    // Admin media library
+    ['GET',  '/admin/media',                           [AdminController::class, 'mediaIndex']],
+    ['POST', '/admin/media/([0-9]+)/trash',            [AdminController::class, 'mediaTrash']],
+    ['POST', '/admin/media/([0-9]+)/destroy',          [AdminController::class, 'mediaDestroy']],
+
+    // Admin recycle bin
+    ['GET',  '/admin/trash',                           [AdminController::class, 'trashIndex']],
+    ['POST', '/admin/trash/restore',                   [AdminController::class, 'trashRestore']],
+    ['POST', '/admin/trash/purge',                     [AdminController::class, 'trashPurge']],
+    ['POST', '/admin/trash/empty',                     [AdminController::class, 'trashEmpty']],
+];
+
+foreach ($routes as [$routeMethod, $pattern, $handler]) {
+    if ($method !== $routeMethod) {
+        continue;
+    }
+    $regex = '#^' . $pattern . '$#';
+    if (preg_match($regex, $uri, $matches)) {
+        array_shift($matches);
+        call_user_func_array([$handler[0], $handler[1]], $matches);
+        exit;
+    }
+}
+
+// 404
+http_response_code(404);
+require dirname(__DIR__) . '/app/views/404.php';
