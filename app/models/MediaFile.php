@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 class MediaFile
 {
-    public static function create(string $path, string $subfolder, string $data, string $mimeType): int
+    public static function create(string $data, string $mimeType): int
     {
         $pdo  = db();
         $stmt = $pdo->prepare(
-            'INSERT INTO media_files (path, subfolder, data, mime_type) VALUES (?, ?, ?, ?)'
+            'INSERT INTO media_files (data, mime_type) VALUES (?, ?)'
         );
-        $stmt->bindValue(1, $path);
-        $stmt->bindValue(2, $subfolder);
-        $stmt->bindParam(3, $data, PDO::PARAM_LOB);
-        $stmt->bindValue(4, $mimeType);
+        $stmt->bindParam(1, $data, PDO::PARAM_LOB);
+        $stmt->bindValue(2, $mimeType);
         $stmt->execute();
         return (int) $pdo->lastInsertId();
     }
@@ -21,14 +19,14 @@ class MediaFile
     public static function all(): array
     {
         return db()->query(
-            'SELECT id, path, subfolder, mime_type, deleted_at, created_at FROM media_files WHERE deleted_at IS NULL ORDER BY created_at DESC'
+            'SELECT id, mime_type, deleted_at, created_at FROM media_files WHERE deleted_at IS NULL ORDER BY created_at DESC'
         )->fetchAll();
     }
 
     public static function trashed(): array
     {
         return db()->query(
-            'SELECT id, path, subfolder, mime_type, deleted_at, created_at FROM media_files WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'
+            'SELECT id, mime_type, deleted_at, created_at FROM media_files WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'
         )->fetchAll();
     }
 
@@ -42,7 +40,7 @@ class MediaFile
     public static function find(int $id): array|false
     {
         $stmt = db()->prepare(
-            'SELECT id, path, subfolder, mime_type, deleted_at, created_at FROM media_files WHERE id = ?'
+            'SELECT id, mime_type, deleted_at, created_at FROM media_files WHERE id = ?'
         );
         $stmt->execute([$id]);
         return $stmt->fetch();

@@ -21,10 +21,8 @@ ob_start();
                              onerror="this.parentElement.classList.add('media-thumb-missing')">
                     </div>
                     <div class="media-card-meta">
-                        <span class="media-filename" title="<?= htmlspecialchars($f['path']) ?>">
-                            <?= htmlspecialchars(basename($f['path'])) ?>
-                        </span>
-                        <span class="media-subfolder"><?= htmlspecialchars($f['subfolder']) ?></span>
+                        <span class="media-filename">ID <?= (int) $f['id'] ?></span>
+                        <span class="media-subfolder"><?= htmlspecialchars($f['mime_type'] ?? '') ?></span>
                         <span class="media-date"><?= date('Y-m-d', strtotime($f['created_at'])) ?></span>
                     </div>
                     <div class="media-card-actions">

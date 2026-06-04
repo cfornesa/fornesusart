@@ -38,16 +38,11 @@ function upload_image(array $file, string $subfolder = ''): string
         throw new RuntimeException('Could not read uploaded file.');
     }
 
-    // Ensure MySQL accepts large blob packets (default may be as low as 4MB)
-    db()->exec('SET SESSION max_allowed_packet = 67108864');
+    // Attempt to raise packet limit for large blobs; MariaDB 11+ ignores SESSION-level SET
+    try { db()->exec('SET SESSION max_allowed_packet = 67108864'); } catch (\Exception) {}
 
     if (class_exists('MediaFile')) {
-        $id = MediaFile::create(
-            basename($file['name'] ?? 'upload'),
-            trim($subfolder, '/'),
-            $blob,
-            $mime
-        );
+        $id = MediaFile::create($blob, $mime);
         return '/image/' . $id;
     }
 

@@ -12,12 +12,12 @@ declare(strict_types=1);
 
 ini_set('memory_limit', '256M');
 
-const DRY_RUN = true;
+const DRY_RUN = false;
 
 require __DIR__ . '/app/bootstrap.php';
 
 $pdo = db();
-$pdo->exec('SET SESSION max_allowed_packet = 67108864');
+try { $pdo->exec('SET SESSION max_allowed_packet = 67108864'); } catch (\Exception $e) {}
 
 $rows = $pdo->query(
     'SELECT id, path, subfolder FROM media_files WHERE data IS NULL ORDER BY id'

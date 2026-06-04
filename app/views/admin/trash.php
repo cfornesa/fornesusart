@@ -54,8 +54,8 @@ ob_start();
                     <tr>
                         <td>
                             <?php if ($tab === 'media'): ?>
-                                <span class="trash-media-path"><?= htmlspecialchars(basename($item['path'])) ?></span>
-                                <span class="admin-hint"> /<?= htmlspecialchars($item['subfolder']) ?></span>
+                                <span class="trash-media-path">ID <?= (int) $item['id'] ?></span>
+                                <span class="admin-hint"> <?= htmlspecialchars($item['mime_type'] ?? '') ?></span>
                             <?php elseif ($tab === 'artworks'): ?>
                                 <?= htmlspecialchars($item['title']) ?>
                                 <?php if ($item['year']): ?>
