@@ -1,7 +1,7 @@
 RewriteEngine On
 
 # Block direct HTTP access to sensitive files
-<FilesMatch "^\.env$|^schema\.sql$|^migrate.*\.sql$">
+<FilesMatch "^\.env$|^schema\.sql$|^migrate.*\.sql$|^migrate.*\.php$">
     Order Allow,Deny
     Deny from all
 </FilesMatch>

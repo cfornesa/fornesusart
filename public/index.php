@@ -17,6 +17,7 @@ require dirname(__DIR__) . '/app/controllers/AboutController.php';
 require dirname(__DIR__) . '/app/controllers/CategoriesController.php';
 require dirname(__DIR__) . '/app/controllers/ExhibitController.php';
 require dirname(__DIR__) . '/app/controllers/AdminController.php';
+require dirname(__DIR__) . '/app/controllers/ImageController.php';
 
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
@@ -29,6 +30,9 @@ if ($uri !== '/' && str_ends_with($uri, '/')) {
 
 // Route table
 $routes = [
+    // Image serving (blob storage)
+    ['GET',  '/image/([0-9]+)',                [ImageController::class,      'serve']],
+
     // Public
     ['GET',  '/',                              [GalleryController::class,    'index']],
     ['GET',  '/categories',                    [CategoriesController::class, 'index']],

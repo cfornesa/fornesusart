@@ -33,26 +33,23 @@ function upload_image(array $file, string $subfolder = ''): string
         throw new RuntimeException('File type not permitted.');
     }
 
-    $ext      = ALLOWED_MIME[$mime];
-    $filename = bin2hex(random_bytes(16)) . '.' . $ext;
-    $dir      = dirname(__DIR__, 2) . '/public/uploads';
-    if ($subfolder) {
-        $dir .= '/' . trim($subfolder, '/');
-    }
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
+    $blob = file_get_contents($file['tmp_name']);
+    if ($blob === false) {
+        throw new RuntimeException('Could not read uploaded file.');
     }
 
-    $dest = $dir . '/' . $filename;
-    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-        throw new RuntimeException('Could not save uploaded file.');
-    }
-
-    $relative = '/uploads/' . ($subfolder ? trim($subfolder, '/') . '/' : '') . $filename;
+    // Ensure MySQL accepts large blob packets (default may be as low as 4MB)
+    db()->exec('SET SESSION max_allowed_packet = 67108864');
 
     if (class_exists('MediaFile')) {
-        MediaFile::create($relative, trim($subfolder, '/'));
+        $id = MediaFile::create(
+            basename($file['name'] ?? 'upload'),
+            trim($subfolder, '/'),
+            $blob,
+            $mime
+        );
+        return '/image/' . $id;
     }
 
-    return $relative;
+    throw new RuntimeException('MediaFile class not available.');
 }

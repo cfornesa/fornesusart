@@ -15,7 +15,7 @@ ob_start();
             <?php foreach ($files as $f): ?>
                 <div class="media-card">
                     <div class="media-thumb-wrap">
-                        <img src="<?= htmlspecialchars($f['path']) ?>"
+                        <img src="/image/<?= (int) $f['id'] ?>"
                              alt=""
                              loading="lazy"
                              onerror="this.parentElement.classList.add('media-thumb-missing')">
