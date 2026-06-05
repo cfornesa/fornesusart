@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 class Artwork
 {
-    private const LEGACY_BROKEN_EMBED_PATTERNS = [
-        '/immersive/exhibits/',
-    ];
-
     public static function allSorted(): array
     {
         return db()->query(
@@ -203,18 +199,6 @@ class Artwork
                     'message' => 'The saved embed code is missing an iframe source URL.',
                     'source' => $pieceValue,
                 ];
-            }
-
-            foreach (self::LEGACY_BROKEN_EMBED_PATTERNS as $pattern) {
-                if (str_contains($src, $pattern)) {
-                    return [
-                        'type' => 'embed',
-                        'valid' => false,
-                        'reason' => 'legacy-embed-target',
-                        'message' => 'This embed points to an older immersive route that no longer resolves here.',
-                        'source' => $src,
-                    ];
-                }
             }
 
             return [

@@ -30,6 +30,17 @@ options regardless of session context. -->
 - [x] 2026-06-04 Claude Code. Google Fonts CDN dependency disclosed and accepted; documented in `docs/dependencies.md`
 - [x] 2026-06-05 Codex. Public header overflow still needs a live browser verification pass at intermediate and narrow widths to confirm the hamburger never opens empty and `Fornesus Art` stays on one line until all inline nav links have collapsed.
 
+## Phase 6 — Codex (2026-06-05)
+
+### Investigation Notes
+- Agent loop initiated to trace why an embed-backed artwork was being marked unavailable in both admin and public views.
+- Verified live that `https://atelier.fornesusart.com/immersive/exhibits/asian-representation?embed=1` returns `HTTP 200`; the local site was producing a false negative before the browser could attempt the iframe render.
+
+### Embed Validation Decision
+- Embed validation now accepts any saved iframe source URL as long as the iframe markup is present and the `src` can be extracted.
+- Route-shaped heuristics for `/immersive/exhibits/` were removed; malformed iframe HTML remains invalid, but legacy-looking or off-site iframe URLs are no longer auto-blocked.
+- Operational rule: if an embed needs review in future, verify it from the browser behavior or the iframe markup itself, not from URL shape alone.
+
 ---
 
 ## Phase 1 — Claude Code (2026-06-04)

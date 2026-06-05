@@ -260,6 +260,8 @@ The **Media Library modal** (available everywhere in the admin) has three tabs:
 - **Upload** — drag-and-drop or file picker; client-side 8 MB / MIME validation before POST
 - **Import** — paste a URL; server fetches, validates (8 MB, JPEG/PNG/GIF/WebP/AVIF), and stores the image
 
+Artwork pieces still support three stored source modes: direct image upload, direct image URL, and raw iframe embed HTML. For iframe embeds, the app only validates the markup shape itself: the saved value must contain an `<iframe>` and the `src` must be extractable. The app does not reject embeds based on route patterns, hostnames, or whether a URL looks legacy.
+
 ---
 
 ## Rich text editor
