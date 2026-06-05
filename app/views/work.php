@@ -18,7 +18,15 @@ ob_start();
 
     <article class="work-detail" aria-labelledby="work-title">
         <div class="work-piece-wrap">
-            <?php if ($artwork['piece_type'] === 'embed'): ?>
+            <?php if (!($pieceState['valid'] ?? false)): ?>
+                <div class="work-piece-fallback" role="status">
+                    <strong class="work-piece-fallback-title">Artwork display unavailable</strong>
+                    <p><?= htmlspecialchars($pieceState['message'] ?? 'This artwork source could not be rendered.') ?></p>
+                    <?php if (($pieceState['reason'] ?? null) === 'legacy-embed-target'): ?>
+                        <p>The saved embed points to an older route that now returns the site’s 404 page instead of the piece itself.</p>
+                    <?php endif ?>
+                </div>
+            <?php elseif ($artwork['piece_type'] === 'embed'): ?>
                 <div class="work-embed">
                     <?= $artwork['piece_value'] /* embed code is stored verbatim — admin-entered only */ ?>
                 </div>

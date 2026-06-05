@@ -1,6 +1,8 @@
 // Drag-and-drop row reordering for admin tables
 document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
     const url = tbody.dataset.reorderUrl;
+    const visibility = tbody.dataset.reorderVisibility || '';
+    const statusId = tbody.dataset.reorderStatus || 'reorder-status';
     let dragging = null;
 
     tbody.querySelectorAll('tr').forEach(row => {
@@ -21,11 +23,15 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
                 .map(r => r.dataset.id)
                 .join(',');
 
-            const status = document.getElementById('reorder-status');
+            const status = document.getElementById(statusId);
+            const body = new URLSearchParams({ ids });
+            if (visibility) {
+                body.set('visibility', visibility);
+            }
             fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ids=' + encodeURIComponent(ids),
+                body: body.toString(),
             })
             .then(r => r.json())
             .then(() => {
@@ -123,6 +129,155 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
             .replace(/[\s_]+/g, '-')
             .replace(/-+/g, '-');
     });
+})();
+
+// Public nav: move trailing items into a hamburger menu when the row overflows
+(function () {
+    const shell = document.querySelector('[data-site-nav-shell]');
+    if (!shell) return;
+
+    const nav = shell.querySelector('[data-site-nav]');
+    const navList = shell.querySelector('[data-site-nav-list]');
+    const toggle = shell.querySelector('[data-site-nav-toggle]');
+    const overflow = shell.querySelector('[data-site-nav-overflow]');
+    const overflowList = shell.querySelector('[data-site-nav-overflow-list]');
+    const items = [...shell.querySelectorAll('[data-site-nav-item]')];
+
+    if (!nav || !navList || !toggle || !overflow || !overflowList || items.length === 0) return;
+
+    function syncVisibleMarkers() {
+        let firstVisibleFound = false;
+        items.forEach(item => {
+            item.classList.remove('is-first-visible');
+            if (item.classList.contains('is-overflow')) {
+                return;
+            }
+            if (!firstVisibleFound) {
+                item.classList.add('is-first-visible');
+                firstVisibleFound = true;
+            }
+        });
+    }
+
+    function closeMenu(force = false) {
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Open navigation menu');
+        toggle.classList.remove('is-open');
+        overflow.hidden = true;
+        if (force) {
+            overflowList.innerHTML = '';
+        }
+    }
+
+    function buildOverflowItem(sourceLink) {
+        const li = document.createElement('li');
+        li.className = 'site-nav-overflow-item';
+
+        const clone = sourceLink.cloneNode(true);
+        clone.classList.remove('active');
+        if (sourceLink.classList.contains('active')) {
+            clone.classList.add('active');
+            clone.setAttribute('aria-current', 'page');
+        }
+
+        li.appendChild(clone);
+        return li;
+    }
+
+    function wouldWrap() {
+        const visibleItems = items.filter(item => !item.classList.contains('is-overflow'));
+        if (visibleItems.length <= 1) {
+            return false;
+        }
+
+        const firstTop = visibleItems[0].offsetTop;
+        return visibleItems.some(item => Math.abs(item.offsetTop - firstTop) > 1);
+    }
+
+    function setMeasuringState(isMeasuring) {
+        navList.classList.toggle('is-measuring', isMeasuring);
+        nav.style.overflow = isMeasuring ? 'visible' : '';
+    }
+
+    function redistribute() {
+        items.forEach(item => item.classList.remove('is-overflow'));
+        overflowList.innerHTML = '';
+        nav.style.maxWidth = '';
+        closeMenu(true);
+        toggle.hidden = false;
+        toggle.style.visibility = 'hidden';
+        setMeasuringState(true);
+        syncVisibleMarkers();
+
+        if (!wouldWrap()) {
+            setMeasuringState(false);
+            toggle.hidden = true;
+            toggle.style.visibility = '';
+            syncVisibleMarkers();
+            return;
+        }
+
+        for (let index = items.length - 1; index >= 0 && wouldWrap(); index -= 1) {
+            items[index].classList.add('is-overflow');
+            syncVisibleMarkers();
+        }
+
+        const overflowedItems = items.filter(item => item.classList.contains('is-overflow'));
+        if (overflowedItems.length === 0) {
+            setMeasuringState(false);
+            toggle.hidden = true;
+            toggle.style.visibility = '';
+            syncVisibleMarkers();
+            return;
+        }
+
+        setMeasuringState(false);
+        toggle.style.visibility = '';
+
+        overflowedItems.forEach(item => {
+            const link = item.querySelector('a');
+            if (link) {
+                overflowList.appendChild(buildOverflowItem(link));
+            }
+        });
+
+        syncVisibleMarkers();
+    }
+
+    toggle.addEventListener('click', () => {
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        toggle.setAttribute('aria-label', isOpen ? 'Open navigation menu' : 'Close navigation menu');
+        toggle.classList.toggle('is-open', !isOpen);
+        overflow.hidden = isOpen;
+    });
+
+    document.addEventListener('click', event => {
+        if (overflow.hidden) return;
+        if (shell.contains(event.target)) return;
+        closeMenu();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !overflow.hidden) {
+            closeMenu();
+            toggle.focus();
+        }
+    });
+
+    window.addEventListener('resize', redistribute);
+    window.addEventListener('orientationchange', redistribute);
+
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(redistribute).catch(() => {});
+    }
+
+    if (typeof ResizeObserver !== 'undefined') {
+        const resizeObserver = new ResizeObserver(() => redistribute());
+        resizeObserver.observe(shell);
+    }
+
+    redistribute();
 })();
 
 // Work description: read more / read less toggle

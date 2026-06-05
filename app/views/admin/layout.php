@@ -35,6 +35,7 @@ $adminNavItems = [
     '/admin/artworks' => 'Works',
     '/admin/categories' => 'Categories',
     '/admin/exhibits' => 'Exhibits',
+    '/admin/navigation' => 'Navigation',
     '/admin/media' => 'Media',
     '/admin/trash' => 'Trash',
     '/admin/pages' => 'Pages',

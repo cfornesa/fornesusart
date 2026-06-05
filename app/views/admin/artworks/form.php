@@ -1,6 +1,7 @@
 <?php
 $isEdit    = $artwork !== null;
 $artwork   = $artwork ?? [];
+$pieceState = $isEdit ? Artwork::inspectPiece($artwork) : null;
 $pageTitle = ($isEdit ? 'Edit Work' : 'Add Work') . ' — Fornesus Art Admin';
 ob_start();
 ?>
@@ -80,20 +81,30 @@ ob_start();
         <!-- Piece -->
         <fieldset class="form-fieldset">
             <legend>Artwork Piece *</legend>
+            <?php if ($pieceState): ?>
+                <div class="piece-source-status <?= !empty($pieceState['valid']) ? 'is-valid' : 'is-invalid' ?>">
+                    <strong>Current piece source:</strong>
+                    <span><?= htmlspecialchars($pieceState['message']) ?></span>
+                    <?php if (!empty($pieceState['source'])): ?>
+                        <code><?= htmlspecialchars($pieceState['source']) ?></code>
+                    <?php endif ?>
+                </div>
+            <?php endif ?>
             <div class="toggle-group" data-target="piece">
                 <label class="toggle-opt">
                     <input type="radio" name="piece_type" value="image_link"
                         <?= in_array($artwork['piece_type'] ?? 'image_link', ['image_link', 'image_upload']) ? 'checked' : '' ?>>
-                    Image
+                    Direct image URL
                 </label>
                 <label class="toggle-opt">
                     <input type="radio" name="piece_type" value="embed"
                         <?= ($artwork['piece_type'] ?? '') === 'embed' ? 'checked' : '' ?>>
-                    Iframe embed
+                    Raw iframe embed HTML
                 </label>
             </div>
             <div class="toggle-panel" data-panel="piece-image_link"
                  style="display:<?= ($artwork['piece_type'] ?? 'image_link') !== 'embed' ? 'block' : 'none' ?>">
+                <p class="admin-hint">Use the media picker for uploaded artwork or paste a direct image URL. Do not paste HTML here.</p>
                 <div class="media-field-preview" id="artwork-piece-preview">
                     <?php if ($isEdit && in_array($artwork['piece_type'] ?? '', ['image_link', 'image_upload'])): ?>
                         <img src="<?= htmlspecialchars($artwork['piece_value']) ?>" alt="">
@@ -110,6 +121,7 @@ ob_start();
             </div>
             <div class="toggle-panel" data-panel="piece-embed"
                  style="display:<?= ($artwork['piece_type'] ?? '') === 'embed' ? 'block' : 'none' ?>">
+                <p class="admin-hint">Paste the complete iframe embed HTML for this artwork here. Direct image URLs belong in the image field above.</p>
                 <textarea name="piece_embed" rows="5" placeholder="<iframe …></iframe>"><?= htmlspecialchars(($artwork['piece_type'] ?? '') === 'embed' ? ($artwork['piece_value'] ?? '') : '') ?></textarea>
             </div>
         </fieldset>

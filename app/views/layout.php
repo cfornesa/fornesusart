@@ -12,8 +12,7 @@
     $resolvedCanonical = $canonicalUrl ?? seo_current_url();
     $resolvedImage = seo_absolute_url($metaImage ?? null);
     $resolvedImageAlt = $metaImageAlt ?? $resolvedOgTitle;
-    $navPages = Page::navItems();
-    $showLegacyAboutLink = empty($navPages);
+    $navigationItems = NavigationItem::publicItems();
     ?>
     <title><?= htmlspecialchars($resolvedTitle) ?></title>
     <meta name="description" content="<?= htmlspecialchars($resolvedDescription) ?>">
@@ -58,22 +57,44 @@
     <a href="#main-content" class="skip-link">Skip to content</a>
     <header class="site-header">
         <a href="/" class="site-title"><?= htmlspecialchars($siteName) ?></a>
-        <nav class="site-nav" aria-label="Primary">
-            <a href="/" class="<?= ($activePage ?? '') === 'gallery' ? 'active' : '' ?>"<?= ($activePage ?? '') === 'gallery' ? ' aria-current="page"' : '' ?>>Gallery</a>
-            <span class="nav-sep" aria-hidden="true">·</span>
-            <a href="/categories" class="<?= ($activePage ?? '') === 'categories' ? 'active' : '' ?>"<?= ($activePage ?? '') === 'categories' ? ' aria-current="page"' : '' ?>>Categories</a>
-            <?php if ($showLegacyAboutLink): ?>
-                <span class="nav-sep" aria-hidden="true">·</span>
-                <a href="/about" class="<?= ($activePage ?? '') === 'about' ? 'active' : '' ?>"<?= ($activePage ?? '') === 'about' ? ' aria-current="page"' : '' ?>>About</a>
-            <?php endif ?>
-            <?php foreach ($navPages as $navPage): ?>
-                <span class="nav-sep" aria-hidden="true">·</span>
-                <a href="/<?= htmlspecialchars($navPage['slug']) ?>"
-                   class="<?= ($activePage ?? '') === $navPage['slug'] ? 'active' : '' ?>"<?= ($activePage ?? '') === $navPage['slug'] ? ' aria-current="page"' : '' ?>>
-                    <?= htmlspecialchars($navPage['nav_label'] ?: $navPage['title']) ?>
-                </a>
-            <?php endforeach ?>
-        </nav>
+        <div class="site-nav-shell" data-site-nav-shell>
+            <nav class="site-nav" aria-label="Primary" data-site-nav>
+                <ul class="site-nav-list" data-site-nav-list>
+                    <?php foreach ($navigationItems as $navItem): ?>
+                        <?php
+                        $isActive = ($activePage ?? '') === ($navItem['active_key'] ?? '');
+                        $isExternal = !str_starts_with($navItem['url'], '/');
+                        ?>
+                        <li class="site-nav-item" data-site-nav-item>
+                            <a href="<?= htmlspecialchars($navItem['url']) ?>"
+                               class="<?= $isActive ? 'active' : '' ?>"
+                               <?= $isActive ? ' aria-current="page"' : '' ?>
+                               <?= !empty($navItem['target']) ? ' target="' . htmlspecialchars($navItem['target']) . '"' : '' ?>
+                               <?= !empty($navItem['target']) ? ' rel="noreferrer noopener"' : '' ?>
+                               <?= $isExternal ? ' data-external-link="true"' : '' ?>>
+                                <?= htmlspecialchars($navItem['label']) ?>
+                            </a>
+                        </li>
+                    <?php endforeach ?>
+                </ul>
+            </nav>
+            <button type="button"
+                    class="site-nav-toggle"
+                    data-site-nav-toggle
+                    aria-expanded="false"
+                    aria-controls="site-nav-overflow"
+                    aria-label="Open navigation menu"
+                    hidden>
+                <span class="site-nav-toggle-lines" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+            </button>
+            <div class="site-nav-overflow" id="site-nav-overflow" data-site-nav-overflow hidden>
+                <ul class="site-nav-overflow-list" data-site-nav-overflow-list></ul>
+            </div>
+        </div>
     </header>
 
     <main id="main-content">

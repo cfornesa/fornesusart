@@ -61,8 +61,26 @@ CREATE TABLE pages (
     og_description    VARCHAR(320) NULL,
     og_image          VARCHAR(500) NULL,
     sort_order        INT DEFAULT 0,
+    deleted_at        TIMESTAMP NULL DEFAULT NULL,
     created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE navigation_items (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    source_type ENUM('system', 'page', 'external') NOT NULL,
+    system_key  VARCHAR(100) NULL,
+    page_id     INT NULL,
+    label       VARCHAR(255) NULL,
+    url         VARCHAR(500) NULL,
+    target      VARCHAR(20) NULL,
+    is_visible  TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order  INT DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_navigation_system (system_key),
+    UNIQUE KEY uniq_navigation_page (page_id),
+    CONSTRAINT fk_navigation_page FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
 );
 
 CREATE TABLE page_sections (

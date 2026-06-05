@@ -22,6 +22,7 @@ require dirname(__DIR__) . '/app/models/Exhibit.php';
 require dirname(__DIR__) . '/app/models/BioSection.php';
 require dirname(__DIR__) . '/app/models/Page.php';
 require dirname(__DIR__) . '/app/models/PageSection.php';
+require dirname(__DIR__) . '/app/models/NavigationItem.php';
 require dirname(__DIR__) . '/app/controllers/GalleryController.php';
 require dirname(__DIR__) . '/app/controllers/WorkController.php';
 require dirname(__DIR__) . '/app/controllers/AboutController.php';
@@ -110,6 +111,11 @@ $routes = [
     ['POST', '/admin/pages/sections/([0-9]+)/edit',    [AdminController::class, 'pageSectionUpdate']],
     ['POST', '/admin/pages/sections/([0-9]+)/delete',  [AdminController::class, 'pageSectionDelete']],
     ['POST', '/admin/pages/([0-9]+)/sections/reorder', [AdminController::class, 'pageSectionReorder']],
+    ['GET',  '/admin/navigation',                      [AdminController::class, 'navigationIndex']],
+    ['POST', '/admin/navigation/external',             [AdminController::class, 'navigationExternalStore']],
+    ['POST', '/admin/navigation/reorder',              [AdminController::class, 'navigationReorder']],
+    ['POST', '/admin/navigation/([0-9]+)/toggle',      [AdminController::class, 'navigationToggle']],
+    ['POST', '/admin/navigation/([0-9]+)/delete',      [AdminController::class, 'navigationDelete']],
 
     // Admin messages
     ['GET',  '/admin/messages',                        [AdminController::class, 'messagesIndex']],

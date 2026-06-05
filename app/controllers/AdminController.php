@@ -259,6 +259,11 @@ class AdminController
     {
         admin_check();
         $pages = Page::all();
+        foreach ($pages as &$page) {
+            $navVisibility = NavigationItem::visibilityByPageId((int) $page['id']);
+            $page['nav_is_visible'] = $navVisibility === null ? !empty($page['show_in_nav']) : $navVisibility;
+        }
+        unset($page);
         require dirname(__DIR__) . '/views/admin/pages/index.php';
     }
 
@@ -277,6 +282,7 @@ class AdminController
         try {
             $data = self::resolvePageData(null);
             $pageId = Page::create($data);
+            NavigationItem::syncPageItem($data + ['id' => $pageId], !empty($data['show_in_nav']));
             header('Location: /admin/pages/' . $pageId . '/edit');
         } catch (Throwable $e) {
             $page = null;
@@ -293,6 +299,10 @@ class AdminController
         if (!$page) {
             header('Location: /admin/pages');
             exit;
+        }
+        $navVisibility = NavigationItem::visibilityByPageId((int) $id);
+        if ($navVisibility !== null) {
+            $page['show_in_nav'] = $navVisibility ? 1 : 0;
         }
 
         $sections = PageSection::allForPage((int) $id);
@@ -312,6 +322,7 @@ class AdminController
         try {
             $data = self::resolvePageData((int) $id);
             Page::update((int) $id, $data);
+            NavigationItem::syncPageItem($data + ['id' => (int) $id]);
             header('Location: /admin/pages/' . (int) $id . '/edit?saved=1');
         } catch (Throwable $e) {
             $page = array_merge($page, $_POST);
@@ -357,6 +368,11 @@ class AdminController
     {
         admin_check();
         $showInNav = Page::toggleNav((int) $id);
+        $page = Page::find((int) $id);
+        if ($page) {
+            $page['show_in_nav'] = $showInNav ? 1 : 0;
+            NavigationItem::syncPageItem($page);
+        }
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'show_in_nav' => (int) $showInNav]);
         exit;
@@ -379,6 +395,90 @@ class AdminController
         Page::reorder($ids);
         header('Content-Type: application/json');
         echo '{"ok":true}';
+        exit;
+    }
+
+    public static function navigationIndex(): void
+    {
+        admin_check();
+        $navigationReady = NavigationItem::isAvailable();
+        $visibleItems = $navigationReady ? NavigationItem::adminItems(true) : [];
+        $hiddenItems = $navigationReady ? NavigationItem::adminItems(false) : [];
+        $navigationError = $_GET['error'] ?? null;
+        require dirname(__DIR__) . '/views/admin/navigation.php';
+    }
+
+    public static function navigationExternalStore(): void
+    {
+        admin_check();
+        if (!NavigationItem::isAvailable()) {
+            header('Location: /admin/navigation?error=migration');
+            exit;
+        }
+
+        $label = trim($_POST['label'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $visibility = $_POST['visibility'] ?? 'visible';
+
+        if ($label === '' || $url === '') {
+            header('Location: /admin/navigation?error=missing');
+            exit;
+        }
+
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            header('Location: /admin/navigation?error=url');
+            exit;
+        }
+
+        NavigationItem::createExternal(
+            $label,
+            $url,
+            $visibility === 'visible',
+            !empty($_POST['open_in_new_tab'])
+        );
+
+        header('Location: /admin/navigation');
+        exit;
+    }
+
+    public static function navigationReorder(): void
+    {
+        admin_check();
+        if (!NavigationItem::isAvailable()) {
+            header('Content-Type: application/json');
+            http_response_code(409);
+            echo '{"ok":false,"error":"migration-required"}';
+            exit;
+        }
+        $ids = array_filter(array_map('intval', explode(',', $_POST['ids'] ?? '')));
+        $visibility = $_POST['visibility'] ?? 'visible';
+        NavigationItem::reorder($visibility === 'visible', $ids);
+        header('Content-Type: application/json');
+        echo '{"ok":true}';
+        exit;
+    }
+
+    public static function navigationToggle(string $id): void
+    {
+        admin_check();
+        if (!NavigationItem::isAvailable()) {
+            header('Location: /admin/navigation?error=migration');
+            exit;
+        }
+        NavigationItem::toggleVisibility((int) $id);
+        header('Location: /admin/navigation');
+        exit;
+    }
+
+    public static function navigationDelete(string $id): void
+    {
+        admin_check();
+        if (!NavigationItem::isAvailable()) {
+            header('Location: /admin/navigation?error=migration');
+            exit;
+        }
+        NavigationItem::deleteExternal((int) $id);
+        header('Location: /admin/navigation');
         exit;
     }
 
@@ -494,6 +594,7 @@ class AdminController
 
     private static function resolveArtworkData(?int $existingId): array
     {
+        $existing = $existingId ? Artwork::find($existingId) : null;
         $title      = trim($_POST['title'] ?? '');
         $year       = trim($_POST['year'] ?? '');
         $desc       = trim($_POST['description'] ?? '');
@@ -509,7 +610,7 @@ class AdminController
         $slug = $postedSlug
             ? slugify($postedSlug)
             : ($existingId
-                ? (Artwork::find($existingId)['slug'] ?? unique_slug($title, $existingId))
+                ? (($existing['slug'] ?? null) ?: unique_slug($title, $existingId))
                 : unique_slug($title));
 
         // Thumbnail — type is always 'link' now (uploaded images use /image/{id} URLs)
@@ -531,7 +632,6 @@ class AdminController
                 if (!empty($_FILES['piece_upload']['name'])) {
                     $pieceValue = upload_image($_FILES['piece_upload'], 'pieces');
                 } elseif ($existingId) {
-                    $existing   = Artwork::find($existingId);
                     $pieceType  = $existing['piece_type'];
                     $pieceValue = $existing['piece_value'];
                 } else {
@@ -540,20 +640,32 @@ class AdminController
                 break;
             case 'image_link':
                 $pieceValue = trim($_POST['piece_link'] ?? '');
+                if (stripos($pieceValue, '<iframe') !== false || stripos($pieceValue, '<img') !== false) {
+                    throw new InvalidArgumentException('Image mode only accepts a direct image URL, not HTML embed code.');
+                }
                 if (!$pieceValue && $existingId) {
-                    $pieceValue = Artwork::find($existingId)['piece_value'];
+                    $pieceValue = $existing['piece_value'];
                 }
                 if (!$pieceValue) {
                     throw new InvalidArgumentException('An image URL is required.');
                 }
+                if (!Artwork::isDirectMediaUrl($pieceValue)) {
+                    throw new InvalidArgumentException('Image mode requires a direct image URL such as `/image/123` or `https://example.com/art.jpg`.');
+                }
                 break;
             case 'embed':
                 $pieceValue = trim($_POST['piece_embed'] ?? '');
+                if ($pieceValue !== '' && stripos($pieceValue, '<iframe') === false) {
+                    throw new InvalidArgumentException('Embed mode requires raw iframe HTML.');
+                }
                 if (!$pieceValue && $existingId) {
-                    $pieceValue = Artwork::find($existingId)['piece_value'];
+                    $pieceValue = $existing['piece_value'];
                 }
                 if (!$pieceValue) {
                     throw new InvalidArgumentException('Embed code is required.');
+                }
+                if (stripos($pieceValue, '<iframe') === false) {
+                    throw new InvalidArgumentException('Embed mode requires raw iframe HTML.');
                 }
                 break;
             default:

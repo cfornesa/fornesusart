@@ -108,6 +108,125 @@
     margin-top: 1rem;
 }
 
+.admin-copy {
+    margin-top: 0.4rem;
+    max-width: 46rem;
+    opacity: 0.72;
+    line-height: 1.55;
+}
+
+.page-nav-toggle,
+.nav-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--amber);
+    cursor: pointer;
+    transition: opacity 0.15s, border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.page-nav-toggle.is-hidden {
+    opacity: 0.55;
+    color: var(--mid);
+}
+
+.page-nav-toggle:hover,
+.nav-delete-btn:hover {
+    opacity: 1;
+    border-color: rgba(200, 155, 60, 0.2);
+    background: rgba(200, 155, 60, 0.05);
+}
+
+.nav-delete-btn {
+    color: #c97b7b;
+}
+
+.nav-admin {
+    gap: 2.25rem;
+}
+
+.nav-admin-form-shell,
+.nav-admin-board {
+    border: 1px solid rgba(200, 155, 60, 0.16);
+    background: rgba(255, 255, 255, 0.015);
+    padding: 1.4rem;
+}
+
+.nav-admin-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.25rem;
+    align-items: end;
+}
+
+.nav-admin-form .form-actions {
+    margin: 0;
+}
+
+.nav-admin-table .nav-admin-destination {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.nav-admin-actions {
+    white-space: nowrap;
+}
+
+.nav-admin-actions form {
+    display: inline-flex;
+}
+
+.nav-admin-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.18rem 0.45rem;
+    border: 1px solid rgba(200, 155, 60, 0.18);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.nav-admin-type-system {
+    color: var(--amber);
+}
+
+.nav-admin-type-page {
+    color: var(--parchment);
+}
+
+.nav-admin-type-external {
+    color: #caa9e8;
+}
+
+.piece-source-status {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(200, 155, 60, 0.18);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.piece-source-status.is-valid {
+    border-color: rgba(200, 155, 60, 0.18);
+}
+
+.piece-source-status.is-invalid {
+    border-color: rgba(201, 123, 123, 0.36);
+    background: rgba(201, 123, 123, 0.08);
+}
+
+.piece-source-status code {
+    overflow-wrap: anywhere;
+    opacity: 0.82;
+}
+
 .admin-hint, .admin-empty {
     font-family: var(--font-mono);
     font-size: 0.75rem;
@@ -922,6 +1041,10 @@ button.media-copy-btn {
     .media-details-panel {
         position: static;
     }
+
+    .nav-admin-form {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {
@@ -956,6 +1079,11 @@ button.media-copy-btn {
     button.media-copy-btn {
         width: 100%;
         border-left: 1px solid var(--amber-border);
+    }
+
+    .nav-admin-board,
+    .nav-admin-form-shell {
+        padding: 1rem;
     }
 
     .admin-logout {

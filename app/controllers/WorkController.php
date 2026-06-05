@@ -12,6 +12,7 @@ class WorkController
             require dirname(__DIR__) . '/views/404.php';
             return;
         }
+        $pieceState = Artwork::inspectPiece($artwork);
         require dirname(__DIR__) . '/views/work.php';
     }
 }

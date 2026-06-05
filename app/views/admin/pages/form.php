@@ -35,7 +35,8 @@ ob_start();
             <input id="page-nav-label" type="text" name="nav_label" value="<?= htmlspecialchars($page['nav_label'] ?? '') ?>">
         </div>
         <div class="toggle-group">
-            <label class="toggle-opt"><input type="checkbox" name="show_in_nav" value="1" <?= !empty($page['show_in_nav']) ? 'checked' : '' ?>> Show in public navigation</label>
+            <label class="toggle-opt"><input type="checkbox" name="show_in_nav" value="1" <?= !empty($page['show_in_nav']) ? 'checked' : '' ?>> Publish to navigation after save</label>
+            <p class="admin-hint">Ordering and later visibility changes are managed from the Navigation screen.</p>
         </div>
         <div class="form-row">
             <label for="page-template">Template</label>
