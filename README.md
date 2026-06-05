@@ -106,6 +106,8 @@ The public layout centralizes SEO and accessibility concerns in one place:
 - progressive enhancement hooks so gallery/work toggles stay readable without JavaScript
 - low-power / reduced-motion celestial fallbacks that quiet decorative motion automatically
 
+Navigation is now centralized through a `navigation_items` registry model. The public header reads from that registry, and `/admin/navigation` manages mixed system, page, and external items in one place. If the table is missing, the app auto-bootstraps it once by creating and seeding nav records only; it does not alter the underlying pages themselves.
+
 ---
 
 ## File structure
@@ -146,6 +148,7 @@ fornesusart/
 │   │   ├── MediaFile.php           LONGBLOB storage — create(data, mime), getData()
 │   │   ├── BioSection.php          Legacy About/Bio fallback sections
 │   │   ├── Page.php                Soft delete, nav toggle, slug validation
+│   │   ├── NavigationItem.php      Unified public/admin navigation registry + bootstrap
 │   │   └── PageSection.php         Ordered sections within a page
 │   ├── views/
 │   │   ├── layout.php              Public shared header/footer + SEO metadata + celestial background
@@ -163,6 +166,7 @@ fornesusart/
 │   │       ├── dashboard.php
 │   │       ├── messages.php
 │   │       ├── media.php           Media library — grid, asset details, + New Image button
+│   │       ├── navigation.php      Navigation manager — visible/hidden nav items + external links
 │   │       ├── trash.php           Recycle bin (artworks / categories / exhibits / media)
 │   │       ├── artworks/
 │   │       │   ├── index.php       Drag-reorder list
@@ -226,10 +230,23 @@ fornesusart/
 | `/admin/categories` | Manage categories |
 | `/admin/exhibits` | Manage exhibits + artwork assignment |
 | `/admin/pages` | Manage pages — drag-reorder, eye-icon nav toggle, soft delete |
+| `/admin/navigation` | Manage system/page/external nav items — reorder, hide/restore, edit external link labels, toggle external `New Tab`, hard-delete external links |
 | `/admin/pages/trash` | Pages-specific recycle bin (restore / delete forever) |
 | `/admin/messages` | Contact form submissions |
 | `/admin/media` | Media library — grid, asset details, + New Image (upload/import) |
 | `/admin/trash` | Recycle bin for artworks, categories, exhibits, media |
+
+---
+
+## Navigation management
+
+The dedicated `/admin/navigation` screen manages three nav item sources together:
+
+- **System items**: permanent built-in routes like `Gallery` and `Categories`; they can be reordered and hidden, but not deleted.
+- **Page items**: page-backed links; they can be reordered and hidden, but remain tied to their source pages.
+- **External links**: custom URLs; they can be added, reordered, hidden/restored, renamed inline, switched between same-tab and new-tab behavior, and permanently deleted.
+
+The admin screen separates nav items into `Visible` and `Hidden` sections. Restoring a hidden item appends it back to the visible list. The public header progressively enhances into an overflow hamburger only when items no longer fit inline.
 
 ---
 

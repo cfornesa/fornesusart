@@ -113,8 +113,10 @@ $routes = [
     ['POST', '/admin/pages/([0-9]+)/sections/reorder', [AdminController::class, 'pageSectionReorder']],
     ['GET',  '/admin/navigation',                      [AdminController::class, 'navigationIndex']],
     ['POST', '/admin/navigation/external',             [AdminController::class, 'navigationExternalStore']],
+    ['POST', '/admin/navigation/([0-9]+)/label',       [AdminController::class, 'navigationLabelUpdate']],
     ['POST', '/admin/navigation/reorder',              [AdminController::class, 'navigationReorder']],
     ['POST', '/admin/navigation/([0-9]+)/toggle',      [AdminController::class, 'navigationToggle']],
+    ['POST', '/admin/navigation/([0-9]+)/target',      [AdminController::class, 'navigationToggleTarget']],
     ['POST', '/admin/navigation/([0-9]+)/delete',      [AdminController::class, 'navigationDelete']],
 
     // Admin messages

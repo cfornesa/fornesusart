@@ -402,8 +402,9 @@ class AdminController
     {
         admin_check();
         $navigationReady = NavigationItem::isAvailable();
-        $visibleItems = $navigationReady ? NavigationItem::adminItems(true) : [];
-        $hiddenItems = $navigationReady ? NavigationItem::adminItems(false) : [];
+        $visibleItems = NavigationItem::adminItems(true);
+        $hiddenItems = NavigationItem::adminItems(false);
+        $navigationMode = $navigationReady ? 'registry' : 'legacy';
         $navigationError = $_GET['error'] ?? null;
         require dirname(__DIR__) . '/views/admin/navigation.php';
     }
@@ -437,6 +438,25 @@ class AdminController
             !empty($_POST['open_in_new_tab'])
         );
 
+        header('Location: /admin/navigation');
+        exit;
+    }
+
+    public static function navigationLabelUpdate(string $id): void
+    {
+        admin_check();
+        if (!NavigationItem::isAvailable()) {
+            header('Location: /admin/navigation?error=migration');
+            exit;
+        }
+
+        $label = trim($_POST['label'] ?? '');
+        if ($label === '') {
+            header('Location: /admin/navigation?error=label');
+            exit;
+        }
+
+        NavigationItem::updateExternalLabel((int) $id, $label);
         header('Location: /admin/navigation');
         exit;
     }
@@ -478,6 +498,18 @@ class AdminController
             exit;
         }
         NavigationItem::deleteExternal((int) $id);
+        header('Location: /admin/navigation');
+        exit;
+    }
+
+    public static function navigationToggleTarget(string $id): void
+    {
+        admin_check();
+        if (!NavigationItem::isAvailable()) {
+            header('Location: /admin/navigation?error=migration');
+            exit;
+        }
+        NavigationItem::toggleExternalTarget((int) $id);
         header('Location: /admin/navigation');
         exit;
     }

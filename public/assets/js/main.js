@@ -184,19 +184,19 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
         return li;
     }
 
-    function wouldWrap() {
-        const visibleItems = items.filter(item => !item.classList.contains('is-overflow'));
-        if (visibleItems.length <= 1) {
-            return false;
-        }
-
-        const firstTop = visibleItems[0].offsetTop;
-        return visibleItems.some(item => Math.abs(item.offsetTop - firstTop) > 1);
+    function visibleItems() {
+        return items.filter(item => !item.classList.contains('is-overflow'));
     }
 
-    function setMeasuringState(isMeasuring) {
-        navList.classList.toggle('is-measuring', isMeasuring);
-        nav.style.overflow = isMeasuring ? 'visible' : '';
+    function inlineWidth() {
+        syncVisibleMarkers();
+        return visibleItems().reduce((sum, item) => sum + item.getBoundingClientRect().width, 0);
+    }
+
+    function shellGap() {
+        const styles = window.getComputedStyle(shell);
+        const gap = styles.columnGap || styles.gap || '0';
+        return parseFloat(gap) || 0;
     }
 
     function redistribute() {
@@ -204,35 +204,37 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
         overflowList.innerHTML = '';
         nav.style.maxWidth = '';
         closeMenu(true);
-        toggle.hidden = false;
-        toggle.style.visibility = 'hidden';
-        setMeasuringState(true);
+        toggle.hidden = true;
         syncVisibleMarkers();
 
-        if (!wouldWrap()) {
-            setMeasuringState(false);
+        const naturalWidth = inlineWidth();
+        const availableWidth = shell.getBoundingClientRect().width;
+        if (naturalWidth <= availableWidth + 1) {
             toggle.hidden = true;
-            toggle.style.visibility = '';
             syncVisibleMarkers();
             return;
         }
 
-        for (let index = items.length - 1; index >= 0 && wouldWrap(); index -= 1) {
+        toggle.hidden = false;
+        const toggleWidth = toggle.getBoundingClientRect().width;
+        const capacity = Math.max(0, shell.getBoundingClientRect().width - toggleWidth - shellGap());
+        let guardedLoops = items.length;
+
+        for (let index = items.length - 1; index >= 0 && inlineWidth() > capacity + 1; index -= 1) {
             items[index].classList.add('is-overflow');
-            syncVisibleMarkers();
+            guardedLoops -= 1;
+            if (guardedLoops < 0) {
+                break;
+            }
         }
 
         const overflowedItems = items.filter(item => item.classList.contains('is-overflow'));
         if (overflowedItems.length === 0) {
-            setMeasuringState(false);
+            closeMenu(true);
             toggle.hidden = true;
-            toggle.style.visibility = '';
             syncVisibleMarkers();
             return;
         }
-
-        setMeasuringState(false);
-        toggle.style.visibility = '';
 
         overflowedItems.forEach(item => {
             const link = item.querySelector('a');
@@ -245,6 +247,11 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
     }
 
     toggle.addEventListener('click', () => {
+        if (overflowList.children.length === 0) {
+            closeMenu(true);
+            toggle.hidden = true;
+            return;
+        }
         const isOpen = toggle.getAttribute('aria-expanded') === 'true';
         toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         toggle.setAttribute('aria-label', isOpen ? 'Open navigation menu' : 'Close navigation menu');

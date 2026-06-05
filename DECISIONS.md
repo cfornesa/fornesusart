@@ -28,6 +28,7 @@ options regardless of session context. -->
 ## REVIEW REQUIRED — Read before starting next session
 - [x] 2026-06-04 Claude Code. URL structure confirmed via plan approval: `/`, `/about`, `/work/[slug]`, `/admin/*`
 - [x] 2026-06-04 Claude Code. Google Fonts CDN dependency disclosed and accepted; documented in `docs/dependencies.md`
+- [ ] 2026-06-05 Codex. Public header overflow still needs a live browser verification pass at intermediate and narrow widths to confirm the hamburger never opens empty and `Fornesus Art` stays on one line until all inline nav links have collapsed.
 
 ---
 
@@ -258,6 +259,47 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
   - Upload zone remains drag-and-drop and click-to-browse
   - Trash and permanent delete remain confirmation-gated
 - Replaced one-off inline success styling with a reusable `.admin-notice` pattern.
+
+---
+
+## Phase 7 — Codex (2026-06-05)
+
+### Navigation Registry Decisions
+- Added a unified `navigation_items` registry to manage mixed system, page, and external navigation items in one ordered list.
+- Chose runtime auto-bootstrap for navigation storage so `/admin/navigation` can become usable without a separate manual migration step:
+  - table creation and seeding happen once per request
+  - initialization is explicitly non-recursive
+  - bootstrap is limited to navigation records only and must not alter or delete the underlying pages
+- System items remain permanent nav records: reorderable and hideable, never deletable.
+- Page-linked items remain tied to their source pages: reorderable and hideable from Navigation, never hard-deleted there.
+- External links are the only nav items that may be hard-deleted or have their labels and tab-target behavior edited directly in Navigation.
+
+### Admin Navigation UX Decisions
+- Added `/admin/navigation` as the dedicated navigation management screen with separate `Visible` and `Hidden` sections.
+- Hidden items restore directly back into the visible navigation instead of using Trash.
+- Replaced ambiguous hidden-state controls with explicit `Hide` / `Restore` actions after a class-name collision (`.is-hidden`) caused hidden restore controls not to render.
+- Added a dedicated `New Tab` column with an accessible switch control for external links only; page/system rows render `Not applicable`.
+- Added inline external-link label editing inside the `Label` column so link names can be updated without recreating the link.
+- Mobile and tablet behavior for the external-link creation form was simplified into a constrained single-column flow.
+
+### Public Navigation Behavior Decisions
+- Public navigation rendering now comes from `NavigationItem::publicItems()` rather than a hard-coded header link list.
+- The header overflow logic now measures against the full navigation shell instead of the already-constrained inline nav box.
+- The hamburger control should only remain visible when actual overflow items exist; the script now explicitly hides the control again if no items moved into overflow.
+- `Fornesus Art` should remain on one line unless the viewport is so narrow that all navigation links have already collapsed into the hamburger and the wordmark still has no remaining horizontal room.
+
+### Regression Notes
+- A recursion bug in navigation auto-bootstrap caused site-wide timeouts when initialization called page-sync logic that re-entered initialization. This was fixed by adding one-time initialization guards and using a direct missing-page-row insert path during bootstrap.
+- The hidden restore control bug was caused by reusing the global admin utility class `.is-hidden`, which applies `display: none !important;`.
+
+### Files Introduced or Functionally Added to Navigation Work
+- `app/models/NavigationItem.php`
+- `app/views/admin/navigation.php`
+- `/admin/navigation` routes in `public/index.php`
+
+### Unresolved / Needs Verification
+- [ ] Confirm in a live browser that the latest header measurement changes fully eliminate the empty hamburger state at the widths previously reported by the user.
+- [ ] Confirm in a live browser that the `Fornesus Art` wordmark no longer breaks into two lines before the navigation fully collapses.
 - Updated copy controls to use the shared admin button/form language while preserving direct URL and HTML embed copying.
 - Added keyboard activation for the upload zone (`Enter` / `Space`) to improve accessibility.
 
