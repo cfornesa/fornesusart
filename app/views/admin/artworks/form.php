@@ -47,7 +47,7 @@ ob_start();
 
         <div class="form-row">
             <label>Description</label>
-            <textarea name="description" rows="4"><?= htmlspecialchars($artwork['description'] ?? '') ?></textarea>
+            <textarea name="description" rows="4" data-tiptap><?= htmlspecialchars($artwork['description'] ?? '') ?></textarea>
         </div>
 
         <div class="form-row">
@@ -58,30 +58,22 @@ ob_start();
         <!-- Thumbnail -->
         <fieldset class="form-fieldset">
             <legend>Thumbnail <span class="form-hint">(optional)</span></legend>
-            <div class="toggle-group" data-target="thumb">
-                <label class="toggle-opt">
-                    <input type="radio" name="thumbnail_type" value="upload"
-                        <?= ($artwork['thumbnail_type'] ?? '') === 'upload' ? 'checked' : '' ?>>
-                    Upload image
-                </label>
-                <label class="toggle-opt">
-                    <input type="radio" name="thumbnail_type" value="link"
-                        <?= ($artwork['thumbnail_type'] ?? 'link') === 'link' ? 'checked' : '' ?>>
-                    Image URL
-                </label>
-            </div>
-            <div class="toggle-panel" data-panel="thumb-upload"
-                 style="display:<?= ($artwork['thumbnail_type'] ?? 'link') === 'upload' ? 'block' : 'none' ?>">
-                <input type="file" name="thumbnail_upload" accept="image/*">
-                <?php if ($isEdit && $artwork['thumbnail_type'] === 'upload'): ?>
-                    <img src="<?= htmlspecialchars($artwork['thumbnail_value']) ?>" class="admin-thumb-preview" alt="">
+            <input type="hidden" name="thumbnail_type" value="link">
+            <div class="media-field-preview" id="artwork-thumb-preview">
+                <?php if ($isEdit && $artwork['thumbnail_value']): ?>
+                    <img src="<?= htmlspecialchars($artwork['thumbnail_value']) ?>" alt="">
                 <?php endif ?>
             </div>
-            <div class="toggle-panel" data-panel="thumb-link"
-                 style="display:<?= ($artwork['thumbnail_type'] ?? 'link') !== 'upload' ? 'block' : 'none' ?>">
-                <input type="url" name="thumbnail_link"
-                       value="<?= htmlspecialchars(($artwork['thumbnail_type'] ?? '') === 'link' ? ($artwork['thumbnail_value'] ?? '') : '') ?>"
-                       placeholder="https://…">
+            <input id="artwork-thumb-url" type="url" name="thumbnail_link"
+                   value="<?= htmlspecialchars($artwork['thumbnail_value'] ?? '') ?>"
+                   placeholder="No image selected" readonly>
+            <div class="media-field-actions">
+                <button type="button" class="picker-trigger"
+                        data-picker-target="artwork-thumb-url"
+                        data-picker-preview="artwork-thumb-preview">Choose Image</button>
+                <button type="button" class="admin-btn admin-btn-ghost admin-btn-sm"
+                        data-clear-input="artwork-thumb-url"
+                        data-clear-preview="artwork-thumb-preview">Clear</button>
             </div>
         </fieldset>
 
@@ -90,14 +82,9 @@ ob_start();
             <legend>Artwork Piece *</legend>
             <div class="toggle-group" data-target="piece">
                 <label class="toggle-opt">
-                    <input type="radio" name="piece_type" value="image_upload"
-                        <?= ($artwork['piece_type'] ?? '') === 'image_upload' ? 'checked' : '' ?>>
-                    Upload image
-                </label>
-                <label class="toggle-opt">
                     <input type="radio" name="piece_type" value="image_link"
-                        <?= ($artwork['piece_type'] ?? 'image_link') === 'image_link' ? 'checked' : '' ?>>
-                    Image URL
+                        <?= in_array($artwork['piece_type'] ?? 'image_link', ['image_link', 'image_upload']) ? 'checked' : '' ?>>
+                    Image
                 </label>
                 <label class="toggle-opt">
                     <input type="radio" name="piece_type" value="embed"
@@ -105,18 +92,21 @@ ob_start();
                     Iframe embed
                 </label>
             </div>
-            <div class="toggle-panel" data-panel="piece-image_upload"
-                 style="display:<?= ($artwork['piece_type'] ?? 'image_link') === 'image_upload' ? 'block' : 'none' ?>">
-                <input type="file" name="piece_upload" accept="image/*">
-                <?php if ($isEdit && $artwork['piece_type'] === 'image_upload'): ?>
-                    <img src="<?= htmlspecialchars($artwork['piece_value']) ?>" class="admin-thumb-preview" alt="">
-                <?php endif ?>
-            </div>
             <div class="toggle-panel" data-panel="piece-image_link"
-                 style="display:<?= ($artwork['piece_type'] ?? 'image_link') === 'image_link' ? 'block' : 'none' ?>">
-                <input type="url" name="piece_link"
-                       value="<?= htmlspecialchars(($artwork['piece_type'] ?? '') === 'image_link' ? ($artwork['piece_value'] ?? '') : '') ?>"
-                       placeholder="https://…">
+                 style="display:<?= ($artwork['piece_type'] ?? 'image_link') !== 'embed' ? 'block' : 'none' ?>">
+                <div class="media-field-preview" id="artwork-piece-preview">
+                    <?php if ($isEdit && in_array($artwork['piece_type'] ?? '', ['image_link', 'image_upload'])): ?>
+                        <img src="<?= htmlspecialchars($artwork['piece_value']) ?>" alt="">
+                    <?php endif ?>
+                </div>
+                <input id="artwork-piece-url" type="url" name="piece_link"
+                       value="<?= htmlspecialchars(in_array($artwork['piece_type'] ?? '', ['image_link', 'image_upload']) ? ($artwork['piece_value'] ?? '') : '') ?>"
+                       placeholder="No image selected" readonly>
+                <button type="button" class="picker-trigger"
+                        data-picker-target="artwork-piece-url"
+                        data-picker-preview="artwork-piece-preview"
+                        data-picker-radio="piece_type"
+                        data-picker-radio-value="image_link">Choose Image</button>
             </div>
             <div class="toggle-panel" data-panel="piece-embed"
                  style="display:<?= ($artwork['piece_type'] ?? '') === 'embed' ? 'block' : 'none' ?>">

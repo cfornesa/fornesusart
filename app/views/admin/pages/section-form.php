@@ -25,7 +25,7 @@ ob_start();
         </div>
         <div class="form-row">
             <label for="section-content">Content *</label>
-            <textarea id="section-content" name="content" rows="10" required><?= htmlspecialchars($section['content'] ?? '') ?></textarea>
+            <textarea id="section-content" name="content" rows="10" required data-tiptap><?= htmlspecialchars($section['content'] ?? '') ?></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="admin-btn"><?= $isEdit ? 'Save Section' : 'Add Section' ?></button>

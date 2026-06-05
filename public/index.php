@@ -95,6 +95,11 @@ $routes = [
     ['GET',  '/admin/pages',                           [AdminController::class, 'pagesIndex']],
     ['GET',  '/admin/pages/create',                    [AdminController::class, 'pageCreate']],
     ['POST', '/admin/pages/create',                    [AdminController::class, 'pageStore']],
+    ['GET',  '/admin/pages/trash',                     [AdminController::class, 'pagesTrash']],
+    ['POST', '/admin/pages/trash/empty',               [AdminController::class, 'pagesTrashEmpty']],
+    ['POST', '/admin/pages/([0-9]+)/restore',          [AdminController::class, 'pageRestore']],
+    ['POST', '/admin/pages/([0-9]+)/hard-delete',      [AdminController::class, 'pageHardDelete']],
+    ['POST', '/admin/pages/([0-9]+)/toggle-nav',       [AdminController::class, 'pageToggleNav']],
     ['GET',  '/admin/pages/([0-9]+)/edit',             [AdminController::class, 'pageEdit']],
     ['POST', '/admin/pages/([0-9]+)/edit',             [AdminController::class, 'pageUpdate']],
     ['POST', '/admin/pages/([0-9]+)/delete',           [AdminController::class, 'pageDelete']],
@@ -110,6 +115,8 @@ $routes = [
     ['GET',  '/admin/messages',                        [AdminController::class, 'messagesIndex']],
 
     // Admin media library
+    ['GET',  '/admin/media/library',                   [AdminController::class, 'mediaLibrary']],
+    ['POST', '/admin/media/import',                    [AdminController::class, 'mediaImport']],
     ['GET',  '/admin/media',                           [AdminController::class, 'mediaIndex']],
     ['POST', '/admin/media/upload',                    [AdminController::class, 'mediaUpload']],
     ['POST', '/admin/media/([0-9]+)/trash',            [AdminController::class, 'mediaTrash']],

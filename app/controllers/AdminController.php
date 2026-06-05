@@ -325,8 +325,50 @@ class AdminController
     public static function pageDelete(string $id): void
     {
         admin_check();
-        Page::delete((int) $id);
+        Page::softDelete((int) $id);
         header('Location: /admin/pages');
+        exit;
+    }
+
+    public static function pagesTrash(): void
+    {
+        admin_check();
+        $pages = Page::trashed();
+        require dirname(__DIR__) . '/views/admin/pages/trash.php';
+    }
+
+    public static function pageRestore(string $id): void
+    {
+        admin_check();
+        Page::restore((int) $id);
+        header('Location: /admin/pages/trash');
+        exit;
+    }
+
+    public static function pageHardDelete(string $id): void
+    {
+        admin_check();
+        Page::hardDelete((int) $id);
+        header('Location: /admin/pages/trash');
+        exit;
+    }
+
+    public static function pageToggleNav(string $id): void
+    {
+        admin_check();
+        $showInNav = Page::toggleNav((int) $id);
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'show_in_nav' => (int) $showInNav]);
+        exit;
+    }
+
+    public static function pagesTrashEmpty(): void
+    {
+        admin_check();
+        foreach (Page::trashed() as $page) {
+            Page::hardDelete((int) $page['id']);
+        }
+        header('Location: /admin/pages/trash');
         exit;
     }
 
@@ -470,16 +512,13 @@ class AdminController
                 ? (Artwork::find($existingId)['slug'] ?? unique_slug($title, $existingId))
                 : unique_slug($title));
 
-        // Thumbnail
+        // Thumbnail — type is always 'link' now (uploaded images use /image/{id} URLs)
         $thumbType = $_POST['thumbnail_type'] ?? 'link';
         if ($thumbType === 'upload' && !empty($_FILES['thumbnail_upload']['name'])) {
             $thumbValue = upload_image($_FILES['thumbnail_upload'], 'thumbnails');
-        } elseif ($thumbType === 'link' && !empty($_POST['thumbnail_link'])) {
-            $thumbValue = trim($_POST['thumbnail_link']);
-        } elseif ($existingId) {
-            $existing   = Artwork::find($existingId);
-            $thumbType  = $existing['thumbnail_type'];
-            $thumbValue = $existing['thumbnail_value'];
+        } elseif ($thumbType === 'link') {
+            $thumbValue = trim($_POST['thumbnail_link'] ?? '') ?: null;
+            if ($thumbValue === null) $thumbType = null;
         } else {
             $thumbType  = null;
             $thumbValue = null;
@@ -543,11 +582,9 @@ class AdminController
         $type = $_POST['thumbnail_type'] ?? 'link';
         if ($type === 'upload' && !empty($_FILES['thumbnail_upload']['name'])) {
             $value = upload_image($_FILES['thumbnail_upload'], $prefix . 's');
-        } elseif ($type === 'link' && !empty($_POST['thumbnail_link'])) {
-            $value = trim($_POST['thumbnail_link']);
-        } elseif ($existing) {
-            $type  = $existing['thumbnail_type'] ?? null;
-            $value = $existing['thumbnail_value'] ?? null;
+        } elseif ($type === 'link') {
+            $value = trim($_POST['thumbnail_link'] ?? '') ?: null;
+            if ($value === null) $type = null;
         } else {
             $type  = null;
             $value = null;
@@ -734,20 +771,59 @@ class AdminController
         require dirname(__DIR__) . '/views/admin/media.php';
     }
 
+    public static function mediaLibrary(): void
+    {
+        admin_check();
+        header('Content-Type: application/json');
+        echo json_encode(MediaFile::all());
+        exit;
+    }
+
     public static function mediaUpload(): void
     {
         admin_check();
-        if (!empty($_FILES['media_file']['name'])) {
-            try {
-                upload_image($_FILES['media_file']);
-                header('Location: /admin/media?uploaded=1');
-                exit;
-            } catch (\Exception $e) {
-                header('Location: /admin/media?error=' . urlencode($e->getMessage()));
-                exit;
-            }
+        header('Content-Type: application/json');
+        if (empty($_FILES['media_file']['name'])) {
+            echo json_encode(['ok' => false, 'error' => 'No file provided.']);
+            exit;
         }
-        header('Location: /admin/media');
+        try {
+            $url = upload_image($_FILES['media_file']);
+            echo json_encode(['ok' => true, 'url' => $url]);
+        } catch (\Exception $e) {
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    public static function mediaImport(): void
+    {
+        admin_check();
+        header('Content-Type: application/json');
+        $url = trim($_POST['url'] ?? '');
+        if (!$url || !filter_var($url, FILTER_VALIDATE_URL)) {
+            echo json_encode(['ok' => false, 'error' => 'Invalid URL.']);
+            exit;
+        }
+        $limit = 8 * 1024 * 1024;
+        $ctx   = stream_context_create(['http' => ['timeout' => 20, 'follow_location' => true]]);
+        $data  = @file_get_contents($url, false, $ctx, 0, $limit + 1);
+        if ($data === false || $data === '') {
+            echo json_encode(['ok' => false, 'error' => 'Could not fetch the URL.']);
+            exit;
+        }
+        if (strlen($data) > $limit) {
+            echo json_encode(['ok' => false, 'error' => 'Image exceeds 8 MB limit.']);
+            exit;
+        }
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime  = $finfo->buffer($data);
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'], true)) {
+            echo json_encode(['ok' => false, 'error' => 'URL does not point to a supported image type.']);
+            exit;
+        }
+        $id = MediaFile::create($data, $mime);
+        echo json_encode(['ok' => true, 'id' => $id, 'url' => "/image/$id"]);
         exit;
     }
 

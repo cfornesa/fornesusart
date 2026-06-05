@@ -9,25 +9,11 @@ ob_start();
             <h1 class="admin-heading">Media Library</h1>
             <p class="admin-hint media-library-intro">Select an asset to copy its URL or move it out of circulation.</p>
         </div>
-        <span class="admin-hint"><?= count($files) ?> file<?= count($files) !== 1 ? 's' : '' ?></span>
-    </div>
-
-    <?php if (isset($_GET['uploaded'])): ?>
-        <p class="admin-notice" role="status">Asset uploaded successfully.</p>
-    <?php endif ?>
-    <?php if (isset($_GET['error'])): ?>
-        <p class="admin-error" role="alert"><?= htmlspecialchars($_GET['error']) ?></p>
-    <?php endif ?>
-
-    <section class="media-upload-panel">
-        <form method="POST" action="/admin/media/upload" enctype="multipart/form-data" class="media-upload-form">
-            <input type="file" name="media_file" id="media-upload-input" accept="image/*">
-        </form>
-        <div class="media-upload-zone" id="media-upload-zone" tabindex="0" role="button" aria-label="Upload or drop an image" aria-controls="media-upload-input">
-            <span class="media-upload-text">Upload or drop an image</span>
-            <span class="media-upload-hint">JPEG, PNG, GIF, WEBP, and AVIF files are supported.</span>
+        <div style="display:flex;gap:0.8rem;align-items:center">
+            <span class="admin-hint"><?= count($files) ?> file<?= count($files) !== 1 ? 's' : '' ?></span>
+            <button type="button" class="admin-btn" id="media-new-image-btn">+ New Image</button>
         </div>
-    </section>
+    </div>
 
     <div class="media-workspace">
         <section class="media-grid-panel">
@@ -216,53 +202,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const uploadZone = document.getElementById('media-upload-zone');
-    const uploadInput = document.getElementById('media-upload-input');
-    const uploadForm = document.querySelector('.media-upload-form');
-
-    function submitUpload() {
-        if (uploadInput.files.length > 0) {
-            uploadForm.submit();
-        }
-    }
-
-    if (uploadZone && uploadInput && uploadForm) {
-        uploadZone.addEventListener('click', () => {
-            uploadInput.click();
-        });
-
-        uploadZone.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                uploadInput.click();
-            }
-        });
-
-        uploadInput.addEventListener('change', () => {
-            submitUpload();
-        });
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                uploadZone.classList.add('is-dragging');
-            }, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                uploadZone.classList.remove('is-dragging');
-            }, false);
-        });
-
-        uploadZone.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            if (files.length > 0) {
-                uploadInput.files = files;
-                submitUpload();
-            }
+    const newImageBtn = document.getElementById('media-new-image-btn');
+    if (newImageBtn) {
+        newImageBtn.addEventListener('click', () => {
+            if (window.openMediaPicker) window.openMediaPicker(null, 'upload');
         });
     }
 });

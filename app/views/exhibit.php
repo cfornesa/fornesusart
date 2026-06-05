@@ -31,7 +31,7 @@ ob_start();
             <h1 class="collection-detail-title" id="exhibit-title"><?= htmlspecialchars($exhibit['name']) ?></h1>
             <?php if ($exhibit['description']): ?>
                 <div class="collection-detail-desc">
-                    <?= nl2br(htmlspecialchars($exhibit['description'])) ?>
+                    <?= $exhibit['description'] ?>
                 </div>
             <?php endif ?>
         </div>

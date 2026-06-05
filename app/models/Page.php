@@ -12,7 +12,7 @@ class Page
     public static function all(): array
     {
         return db()->query(
-            'SELECT * FROM pages ORDER BY sort_order ASC, id ASC'
+            'SELECT * FROM pages WHERE deleted_at IS NULL ORDER BY sort_order ASC, id ASC'
         )->fetchAll();
     }
 
@@ -21,7 +21,7 @@ class Page
         try {
             $stmt = db()->prepare(
                 'SELECT * FROM pages
-                 WHERE status = ? AND show_in_nav = 1
+                 WHERE status = ? AND show_in_nav = 1 AND deleted_at IS NULL
                  ORDER BY sort_order ASC, id ASC'
             );
             $stmt->execute(['published']);
@@ -40,14 +40,14 @@ class Page
 
     public static function findBySlug(string $slug): array|false
     {
-        $stmt = db()->prepare('SELECT * FROM pages WHERE slug = ?');
+        $stmt = db()->prepare('SELECT * FROM pages WHERE slug = ? AND deleted_at IS NULL');
         $stmt->execute([$slug]);
         return $stmt->fetch();
     }
 
     public static function findPublishedBySlug(string $slug): array|false
     {
-        $stmt = db()->prepare('SELECT * FROM pages WHERE slug = ? AND status = ?');
+        $stmt = db()->prepare('SELECT * FROM pages WHERE slug = ? AND status = ? AND deleted_at IS NULL');
         $stmt->execute([$slug, 'published']);
         return $stmt->fetch();
     }
@@ -111,15 +111,52 @@ class Page
         ]);
     }
 
-    public static function delete(int $id): void
+    public static function softDelete(int $id): void
+    {
+        $stmt = db()->prepare('UPDATE pages SET deleted_at = NOW() WHERE id = ?');
+        $stmt->execute([$id]);
+    }
+
+    public static function hardDelete(int $id): void
     {
         $stmt = db()->prepare('DELETE FROM pages WHERE id = ?');
         $stmt->execute([$id]);
     }
 
+    public static function restore(int $id): void
+    {
+        $stmt = db()->prepare('UPDATE pages SET deleted_at = NULL WHERE id = ?');
+        $stmt->execute([$id]);
+    }
+
+    public static function trashed(): array
+    {
+        return db()->query(
+            'SELECT * FROM pages WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'
+        )->fetchAll();
+    }
+
+    public static function trashedCount(): int
+    {
+        return (int) db()->query(
+            'SELECT COUNT(*) FROM pages WHERE deleted_at IS NOT NULL'
+        )->fetchColumn();
+    }
+
+    public static function toggleNav(int $id): bool
+    {
+        $stmt = db()->prepare('SELECT show_in_nav FROM pages WHERE id = ?');
+        $stmt->execute([$id]);
+        $current = (int) $stmt->fetchColumn();
+        $new = $current ? 0 : 1;
+        $stmt = db()->prepare('UPDATE pages SET show_in_nav = ? WHERE id = ?');
+        $stmt->execute([$new, $id]);
+        return (bool) $new;
+    }
+
     public static function reorder(array $ids): void
     {
-        $stmt = db()->prepare('UPDATE pages SET sort_order = ? WHERE id = ?');
+        $stmt = db()->prepare('UPDATE pages SET sort_order = ? WHERE id = ? AND deleted_at IS NULL');
         foreach (array_values($ids) as $index => $id) {
             $stmt->execute([$index, $id]);
         }
@@ -135,7 +172,7 @@ class Page
             throw new InvalidArgumentException('That slug is reserved by the site.');
         }
 
-        $stmt = db()->prepare('SELECT id FROM pages WHERE slug = ? AND id != ?');
+        $stmt = db()->prepare('SELECT id FROM pages WHERE slug = ? AND id != ? AND deleted_at IS NULL');
         $stmt->execute([$slug, $excludeId]);
         if ($stmt->fetch()) {
             throw new InvalidArgumentException('That slug is already in use.');

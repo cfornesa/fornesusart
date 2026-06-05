@@ -29,36 +29,28 @@ ob_start();
 
         <div class="form-row">
             <label>Description</label>
-            <textarea name="description" rows="5"><?= htmlspecialchars($exhibit['description'] ?? '') ?></textarea>
+            <textarea name="description" rows="5" data-tiptap><?= htmlspecialchars($exhibit['description'] ?? '') ?></textarea>
         </div>
 
         <!-- Thumbnail -->
         <fieldset class="form-fieldset">
-            <legend>Thumbnail</legend>
-            <div class="toggle-group" data-target="thumb">
-                <label class="toggle-opt">
-                    <input type="radio" name="thumbnail_type" value="upload"
-                        <?= ($exhibit['thumbnail_type'] ?? '') === 'upload' ? 'checked' : '' ?>>
-                    Upload image
-                </label>
-                <label class="toggle-opt">
-                    <input type="radio" name="thumbnail_type" value="link"
-                        <?= ($exhibit['thumbnail_type'] ?? 'link') === 'link' ? 'checked' : '' ?>>
-                    Image URL
-                </label>
-            </div>
-            <div class="toggle-panel" data-panel="thumb-upload"
-                 style="display:<?= ($exhibit['thumbnail_type'] ?? 'link') === 'upload' ? 'block' : 'none' ?>">
-                <input type="file" name="thumbnail_upload" accept="image/*">
-                <?php if ($isEdit && ($exhibit['thumbnail_type'] ?? '') === 'upload' && $exhibit['thumbnail_value']): ?>
-                    <img src="<?= htmlspecialchars($exhibit['thumbnail_value']) ?>" class="admin-thumb-preview" alt="">
+            <legend>Thumbnail <span class="form-hint">(optional)</span></legend>
+            <input type="hidden" name="thumbnail_type" value="link">
+            <div class="media-field-preview" id="exhibit-thumb-preview">
+                <?php if ($isEdit && $exhibit['thumbnail_value']): ?>
+                    <img src="<?= htmlspecialchars($exhibit['thumbnail_value']) ?>" alt="">
                 <?php endif ?>
             </div>
-            <div class="toggle-panel" data-panel="thumb-link"
-                 style="display:<?= ($exhibit['thumbnail_type'] ?? 'link') !== 'upload' ? 'block' : 'none' ?>">
-                <input type="url" name="thumbnail_link"
-                       value="<?= htmlspecialchars(($exhibit['thumbnail_type'] ?? '') === 'link' ? ($exhibit['thumbnail_value'] ?? '') : '') ?>"
-                       placeholder="https://…">
+            <input id="exhibit-thumb-url" type="url" name="thumbnail_link"
+                   value="<?= htmlspecialchars($exhibit['thumbnail_value'] ?? '') ?>"
+                   placeholder="No image selected" readonly>
+            <div class="media-field-actions">
+                <button type="button" class="picker-trigger"
+                        data-picker-target="exhibit-thumb-url"
+                        data-picker-preview="exhibit-thumb-preview">Choose Image</button>
+                <button type="button" class="admin-btn admin-btn-ghost admin-btn-sm"
+                        data-clear-input="exhibit-thumb-url"
+                        data-clear-preview="exhibit-thumb-preview">Clear</button>
             </div>
         </fieldset>
 

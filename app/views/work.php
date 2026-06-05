@@ -48,14 +48,8 @@ ob_start();
                 <?php endif ?>
             </div>
             <?php if ($artwork['description']): ?>
-                <?php $desc = $artwork['description']; $long = mb_strlen($desc) > 255; ?>
                 <div class="work-description">
-                    <?php if ($long): ?>
-                        <span class="desc-short" id="work-desc-short"><?= nl2br(htmlspecialchars(mb_substr($desc, 0, 255))) ?>&#8230; <button type="button" class="desc-read-more" aria-expanded="false" aria-controls="work-desc-full">Read more</button></span>
-                        <span class="desc-full" id="work-desc-full"><?= nl2br(htmlspecialchars($desc)) ?> <button type="button" class="desc-read-less" aria-expanded="true" aria-controls="work-desc-full">Read less</button></span>
-                    <?php else: ?>
-                        <?= nl2br(htmlspecialchars($desc)) ?>
-                    <?php endif ?>
+                    <?= $artwork['description'] ?>
                 </div>
             <?php endif ?>
         </div>

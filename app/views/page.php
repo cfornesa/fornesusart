@@ -23,7 +23,7 @@ ob_start();
                     <h2 class="page-section-heading" id="page-section-<?= (int) $section['id'] ?>"><?= htmlspecialchars($section['heading']) ?></h2>
                 <?php endif ?>
                 <div class="page-section-body">
-                    <?= nl2br(htmlspecialchars($section['content'])) ?>
+                    <?= $section['content'] ?>
                 </div>
             </section>
         <?php endforeach ?>

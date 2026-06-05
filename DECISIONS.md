@@ -367,6 +367,111 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
 - `public/assets/css/admin.css` — updated admin headings, set login button font to mono
 - `public/assets/js/cosmos.js` — implemented color-temperature based star spawning
 
+## Phase 9 — Claude Code (2026-06-04 → 2026-06-05)
+
+### Pages System — Database + Soft Delete + Nav Toggle
+
+- Ran `migrate_phase6_pages.sql` against the live DB to create `pages` and `page_sections` (had been written but never executed).
+- Created `migrate_pages_softdelete.sql`: `ALTER TABLE pages ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL`.
+- `Page` model updated: `all()`, `navItems()`, `findBySlug()`, `findPublishedBySlug()`, `validateSlug()` and `reorder()` all filter `WHERE deleted_at IS NULL`. Added `softDelete`, `hardDelete`, `restore`, `trashed`, `trashedCount`, `toggleNav` methods.
+- `pageDelete` controller now soft-deletes (sends to trash) instead of hard-deleting.
+- Pages trash is a standalone admin section at `/admin/pages/trash` — entirely separate from the existing `/admin/trash` (artworks/categories/exhibits/media). Reason: pages are a distinct content type with their own editorial workflow.
+- Eye-icon nav toggle added to the pages index: `POST /admin/pages/{id}/toggle-nav` returns JSON and flips `show_in_nav` in place without page reload. SVG eye-open / eye-crossed icons in the Nav column.
+
+### Rich Text Editor (Tiptap)
+
+- Replaced all `<textarea>` content fields with [Tiptap](https://tiptap.dev/) — a headless ProseMirror-based rich text editor.
+- **Loading strategy**: No build step. Tiptap loaded via ES module imports (`<script type="module">`) from `https://esm.sh/`. An `importmap` in the admin layout deduplicate ProseMirror instances across all extensions. Dependency on `esm.sh` CDN — admin panel requires internet access when the editor is in use. Self-hosting alternative: run a one-time `esbuild` bundle and serve from `public/assets/js/`.
+- **Extensions in use**: StarterKit, Underline, TextStyle, FontSize (custom inline extension), Color, Highlight (multicolor), FontFamily, LinkWithTitle (Link extended with `title` attribute), Image (extended with custom NodeView), IframeNode (custom block extension).
+- **Toolbar**: Paragraph/H1-H4 dropdown, font family select, font size input (debounced), B/I/U/S, text colour, highlight colour, horizontal rule, link, insert image from library, insert iframe (prompt), HTML source toggle.
+- **HTML source toggle**: Shows a `<textarea>` with raw HTML. All other toolbar controls disabled while in source mode. Form submit reads from source textarea when active.
+- **Storage**: Tiptap HTML is stored directly in `TEXT` columns. No schema changes. Public rendering changed from `nl2br(htmlspecialchars($content))` to raw HTML output for: `page_sections.content`, `artworks.description`, `categories.description`, `exhibits.description`.
+- **Existing content**: Plain text content written before Tiptap normalises to `<p>` tags on first save through the editor. No one-time migration script needed.
+- Fields with Tiptap: `page_sections.content` (section-form.php), `artworks.description`, `categories.description`, `exhibits.description`.
+
+### Media Library Modal Picker
+
+- **Architecture**: A `<dialog id="media-picker-modal">` in `admin/layout.php` (present on every admin page) with three tabs: **Select** (grid of existing images), **Upload** (drag-and-drop, max 8 MB, client-side validation before POST), **Import** (URL-to-DB fetch, server-side MIME validation + 8 MB limit).
+- **New endpoints**: `GET /admin/media/library` → JSON array of non-trashed files. `POST /admin/media/upload` now returns JSON (was a redirect). `POST /admin/media/import` fetches remote URL via `file_get_contents`, validates MIME/size, stores as LONGBLOB.
+- **CSS bug pattern**: `display: flex` on a `<dialog>` or element using the `hidden` attribute overrides `display: none` and makes the element permanently visible. Fixed across the media picker dialog and image NodeView popover by splitting into base rule (`display: none`) and `:not([hidden])` rule (`display: flex`). Dialog centering additionally fixed by `position: fixed; inset: 0; margin: auto`.
+- **Trigger points**: Tiptap image toolbar button opens picker on Select tab; standalone `[data-picker-target]` buttons on thumbnail/OG image fields open on Select tab; media library "+ New Image" button opens on Upload tab in library-only mode (page reloads on close).
+- **After upload/import**: picker automatically switches to Select tab with the new image pre-selected; alt text input is revealed.
+- **Library-only mode** (no callback): "Select Image" button is hidden; on dialog close, page reloads to refresh the media grid.
+- **Media library page**: removed the standalone upload zone; added `+ New Image` button that opens the picker.
+
+### Thumbnail and Piece Fields Simplified
+
+- Artwork thumbnail, category thumbnail, exhibit thumbnail, artwork piece (image type): removed "Upload image" / "Image URL" radio toggles entirely. Replaced with a hidden `<input type="hidden" name="thumbnail_type" value="link">`, a media preview area, a read-only URL input, a "Choose Image" picker button, and a "Clear" button.
+- All uploads and external URLs now go through the media library first (blob stored in DB, served via `/image/{id}`). This eliminates direct-to-form file uploads for thumbnails.
+- `resolveArtworkData()` and `resolveThumbnail()` in AdminController updated: submitting an empty `thumbnail_link` now clears the thumbnail (sets type and value to null) rather than preserving the existing value. This enables the "Clear" button to work.
+- Artwork piece field: `image_upload` radio removed; only "Image" (maps to `image_link`) and "Iframe embed" remain. Existing artworks stored as `image_upload` are migrated to `image_link` on next save (same `/image/{id}` URL, different type tag).
+
+### Alt Text for Images + Link Title
+
+- **Media picker**: alt text input (`#mp-alt-input`) in the modal footer, hidden until an image is selected on the Select tab. `confirmSelection()` now calls `callback({ url, alt })` instead of `callback(url)`. Standalone pickers (thumbnails, OG image) extract `.url` and ignore `.alt` since server templates derive alt from item title/name.
+- **Image NodeView**: pencil icon button (`opacity: 0`, revealed on hover via CSS) at bottom-right corner of each image in Tiptap. Clicking opens an inline popover with alt text input, Save, ✕ (close), and "Delete image from editor" (red text link, confirm-guarded). Save dispatches `tr.setNodeMarkup(pos, null, newAttrs)` directly — does not rely on `updateAttributes` command (which requires the node to be the active selection). `hidden` attribute toggle was the visibility mechanism; `display: flex` in CSS caused the popover to be permanently visible until fixed with the `display: none` + `:not([hidden])` pattern.
+- **Link popover**: floating `position: fixed` trigger (pencil icon) appears next to the active link using `editor.view.coordsAtPos()` + `getBoundingClientRect()`. Clicking opens a popover with URL + title fields. Toolbar link button also shows this popover. `LinkWithTitle` extends `@tiptap/extension-link` with a `title` attribute that round-trips through HTML.
+- **NodeView `stopEvent`**: returns `true` only for events on the edit button and popover, passing all other events through to ProseMirror so text selection drag works normally. `img.draggable = false` + `dragstart → preventDefault` prevents native browser image drag from intercepting text-selection drags. Outside-close uses `document.addEventListener('mousedown', ...)` rather than `click` because drag-to-select produces no `click` event.
+
+### Files Created (Phase 9)
+- `migrate_pages_softdelete.sql`
+- `public/assets/css/tiptap.css`
+- `public/assets/js/tiptap-editor.js`
+- `app/views/admin/pages/trash.php`
+
+---
+
+## Phase 10 — Documentation + Public Accessibility Audit (2026-06-05)
+
+### Current-State Clarifications
+- Preserved older implementation notes as history, but clarified the current source of truth in project markdown after the site-wide Pages/public-accessibility work moved beyond the earlier admin-only Media Library effort.
+- Corrected the dependency story: the public site and authenticated admin shell use self-hosted `Lora`, `Pinyon Script`, and `Courier Prime`, but the standalone admin login still loads Google Fonts for its legacy title/body stack.
+
+### Public Layout and Metadata Decisions Captured
+- Documented that the shared public layout now centralizes:
+  - canonical URLs
+  - meta descriptions
+  - Open Graph and Twitter metadata
+  - optional `robots` tags
+  - `og:image:alt` and `twitter:image:alt`
+- Documented the current legacy-nav fallback behavior:
+  - when no managed nav pages exist, the public nav still exposes `/about`
+  - `/about` can still render the legacy About/contact experience when the Pages migration or seeded managed pages are unavailable
+
+### Accessibility, Performance, and Atmosphere Decisions Captured
+- Recorded the current public accessibility posture:
+  - skip link
+  - `aria-current` nav states
+  - labelled sections on managed pages and legacy About
+  - decorative `aria-hidden` markers on non-content visuals
+  - accessible contact-form success/error semantics
+- Recorded the progressive-enhancement behavior:
+  - homepage "See More" and work-description expansion only collapse content when JavaScript is available
+  - the public site remains readable without JS
+- Recorded the low-power / reduced-motion atmosphere behavior:
+  - `cosmos.js` adds a `low-power` class when reduced-motion, save-data, low-memory, or low-CPU conditions are detected
+  - CSS quiets nebula, grid, glow, and other decorative motion accordingly
+
+### Markdown Files Updated (Phase 10)
+- `README.md` — current routes, fallback behavior, public metadata/accessibility summary, legacy About artifacts added to the file map
+- `docs/dependencies.md` — corrected self-hosted-vs-CDN font story; documented Google Fonts as admin-login-only
+- `MEMORY.md` — added current public accessibility/metadata/low-power notes and corrected the font-hosting summary
+
+### Files Updated (Phase 9)
+- `app/models/Page.php` — soft delete, toggleNav, query filters
+- `app/controllers/AdminController.php` — pageDelete → softDelete; pagesTrash, pageRestore, pageHardDelete, pageToggleNav, pagesTrashEmpty; mediaLibrary, mediaUpload (→ JSON), mediaImport; thumbnail clear logic in resolveArtworkData + resolveThumbnail
+- `public/index.php` — pages trash routes, media library/import routes, toggle-nav route
+- `app/views/admin/layout.php` — importmap for Tiptap ESM; tiptap.css; tiptap-editor.js module; media picker dialog HTML
+- `app/views/admin/pages/index.php` — eye icon nav toggle, trash count link, soft-delete label
+- `app/views/admin/pages/section-form.php` — `data-tiptap` on content textarea
+- `app/views/admin/pages/form.php` — picker button for og_image
+- `app/views/admin/artworks/form.php` — Tiptap on description; picker-only thumbnail + piece
+- `app/views/admin/categories/form.php` — Tiptap on description; picker-only thumbnail
+- `app/views/admin/exhibits/form.php` — Tiptap on description; picker-only thumbnail
+- `app/views/admin/media.php` — removed upload zone; `+ New Image` button
+- `app/views/page.php`, `work.php`, `exhibit.php`, `category.php` — raw HTML output for rich text fields
+- `docs/dependencies.md` — Tiptap CDN dependency documented
+
 <!-- Add a new dated section at the start of each phase following
      the same pattern. Resolved checkpoints from the prior phase
      should be marked [x] and left in place — do not delete them.
