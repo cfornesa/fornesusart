@@ -1,73 +1,83 @@
 <?php
 $pageTitle = 'Media Library — Fornesus Art Admin';
+$mainClass = 'admin-main-wide';
 ob_start();
 ?>
-<style>
-/* Overrides standard admin layout maximum width specifically for the media library to feel spacious */
-.admin-main {
-    max-width: 1200px;
-}
-</style>
-
-<div class="admin-section media-workspace-root">
+<div class="admin-section media-library-page">
     <div class="admin-section-head">
-        <h1 class="admin-heading">Media Library</h1>
+        <div>
+            <h1 class="admin-heading">Media Library</h1>
+            <p class="admin-hint media-library-intro">Select an asset to copy its URL or move it out of circulation.</p>
+        </div>
         <span class="admin-hint"><?= count($files) ?> file<?= count($files) !== 1 ? 's' : '' ?></span>
     </div>
 
     <?php if (isset($_GET['uploaded'])): ?>
-        <p class="admin-hint" style="color: var(--amber); font-style: normal; margin-top: -1rem; margin-bottom: 1rem;">Asset uploaded successfully.</p>
+        <p class="admin-notice">Asset uploaded successfully.</p>
     <?php endif ?>
     <?php if (isset($_GET['error'])): ?>
-        <p class="admin-error" style="margin-top: -1rem; margin-bottom: 1rem;"><?= htmlspecialchars($_GET['error']) ?></p>
+        <p class="admin-error"><?= htmlspecialchars($_GET['error']) ?></p>
     <?php endif ?>
 
-    <!-- Upload Zone -->
-    <div class="media-upload-zone" id="media-upload-zone">
-        <form method="POST" action="/admin/media/upload" enctype="multipart/form-data" style="display:none;">
+    <section class="media-upload-panel">
+        <form method="POST" action="/admin/media/upload" enctype="multipart/form-data" class="media-upload-form">
             <input type="file" name="media_file" id="media-upload-input" accept="image/*">
         </form>
-        <span class="media-upload-text">Drag & drop an image here, or click to browse</span>
-        <span class="media-upload-hint">Supports JPEG, PNG, GIF, WEBP, AVIF</span>
-    </div>
+        <div class="media-upload-zone" id="media-upload-zone" tabindex="0" role="button" aria-controls="media-upload-input">
+            <span class="media-upload-text">Upload or drop an image</span>
+            <span class="media-upload-hint">JPEG, PNG, GIF, WEBP, and AVIF files are supported.</span>
+        </div>
+    </section>
 
-    <!-- Main Split Workspace -->
     <div class="media-workspace">
-        <div class="media-grid-container">
+        <section class="media-grid-panel">
+            <div class="media-panel-head">
+                <h2 class="admin-subheading">Library Grid</h2>
+                <span class="admin-hint">Newest uploads appear first.</span>
+            </div>
+
             <?php if (empty($files)): ?>
                 <p class="admin-empty">No uploaded files yet.</p>
             <?php else: ?>
-                <div class="media-grid-compact">
+                <div class="media-grid">
                     <?php foreach ($files as $f): ?>
-                        <div class="media-tile"
+                        <button
+                             type="button"
+                             class="media-card"
                              data-id="<?= (int) $f['id'] ?>"
                              data-mime="<?= htmlspecialchars($f['mime_type'] ?? '') ?>"
                              data-date="<?= date('Y-m-d', strtotime($f['created_at'])) ?>">
-                            <div class="media-tile-thumb">
+                            <span class="media-card-thumb">
                                 <img src="/image/<?= (int) $f['id'] ?>"
                                      alt=""
                                      loading="lazy"
                                      onerror="this.parentElement.classList.add('media-thumb-missing')">
-                            </div>
-                        </div>
+                            </span>
+                            <span class="media-card-meta">
+                                <span class="media-card-id">Asset #<?= (int) $f['id'] ?></span>
+                                <span class="media-card-type"><?= htmlspecialchars($f['mime_type'] ?? 'Unknown type') ?></span>
+                                <span class="media-card-date"><?= date('Y-m-d', strtotime($f['created_at'])) ?></span>
+                            </span>
+                        </button>
                     <?php endforeach ?>
                 </div>
             <?php endif ?>
-        </div>
+        </section>
 
-        <!-- Sticky Details Panel -->
-        <div class="media-details-panel">
-            <div class="media-details-preview">
-                <img id="details-preview-img" src="" alt="" style="display: none;">
+        <aside class="media-details-panel">
+            <div class="media-panel-head">
+                <h2 class="admin-subheading">Selected Asset</h2>
+                <span class="admin-hint">Preview, copy, or remove.</span>
             </div>
-            
+            <div class="media-details-preview">
+                <img id="details-preview-img" class="is-hidden" src="" alt="">
+            </div>
+
             <div class="media-details-placeholder" id="details-placeholder">
                 Select an asset to view details.
             </div>
 
-            <div class="media-details-content" id="details-content-area" style="display: none; flex-direction: column;">
-                <h3 class="media-details-title">Asset Details</h3>
-                
+            <div class="media-details-content is-hidden" id="details-content-area">
                 <div class="media-details-meta">
                     <div class="media-meta-row">
                         <span class="media-meta-label">ID</span>
@@ -83,19 +93,19 @@ ob_start();
                     </div>
                 </div>
 
-                <div class="media-details-code">
-                    <label>Direct URL</label>
+                <div class="form-row media-details-code">
+                    <label for="input-url">Direct URL</label>
                     <div class="media-code-input-wrap">
                         <input type="text" id="input-url" readonly>
-                        <button type="button" class="copy-btn" data-copy-target="input-url">Copy</button>
+                        <button type="button" class="admin-btn media-copy-btn" data-copy-target="input-url">Copy</button>
                     </div>
                 </div>
 
-                <div class="media-details-code">
-                    <label>HTML Embed Code</label>
+                <div class="form-row media-details-code">
+                    <label for="input-html">HTML Embed Code</label>
                     <div class="media-code-input-wrap">
                         <input type="text" id="input-html" readonly>
-                        <button type="button" class="copy-btn" data-copy-target="input-html">Copy</button>
+                        <button type="button" class="admin-btn media-copy-btn" data-copy-target="input-html">Copy</button>
                     </div>
                 </div>
 
@@ -108,13 +118,13 @@ ob_start();
                     </form>
                 </div>
             </div>
-        </div>
+        </aside>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const tiles = document.querySelectorAll('.media-tile');
+    const cards = document.querySelectorAll('.media-card');
     const previewImg = document.getElementById('details-preview-img');
     const metaId = document.getElementById('meta-id');
     const metaMime = document.getElementById('meta-mime');
@@ -126,51 +136,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const placeholderText = document.getElementById('details-placeholder');
     const contentArea = document.getElementById('details-content-area');
 
-    function selectTile(tile) {
-        tiles.forEach(t => t.classList.remove('active'));
-        tile.classList.add('active');
+    function selectCard(card) {
+        cards.forEach(item => item.classList.remove('active'));
+        card.classList.add('active');
 
-        const id = tile.dataset.id;
-        const mime = tile.dataset.mime;
-        const date = tile.dataset.date;
+        const id = card.dataset.id;
+        const mime = card.dataset.mime;
+        const date = card.dataset.date;
         const imgUrl = `/image/${id}`;
 
-        // Update preview image
         previewImg.src = imgUrl;
-        previewImg.style.display = 'block';
+        previewImg.classList.remove('is-hidden');
 
-        // Update metadata
         metaId.textContent = id;
         metaMime.textContent = mime;
         metaDate.textContent = date;
 
-        // Update code snippets
         inputUrl.value = window.location.origin + imgUrl;
         inputHtml.value = `<img src="${imgUrl}" alt="">`;
 
-        // Update form actions
         trashForm.action = `/admin/media/${id}/trash`;
         destroyForm.action = `/admin/media/${id}/destroy`;
 
-        // Show details content, hide placeholder
-        placeholderText.style.display = 'none';
-        contentArea.style.display = 'flex';
+        placeholderText.classList.add('is-hidden');
+        contentArea.classList.remove('is-hidden');
     }
 
-    tiles.forEach(tile => {
-        tile.addEventListener('click', () => {
-            selectTile(tile);
+    cards.forEach(card => {
+        card.addEventListener('click', () => {
+            selectCard(card);
         });
     });
 
-    // Auto-select first tile if available
-    if (tiles.length > 0) {
-        selectTile(tiles[0]);
+    if (cards.length > 0) {
+        selectCard(cards[0]);
     } else {
         placeholderText.textContent = 'No assets in library.';
     }
 
-    // Confirm dialogs
     trashForm.addEventListener('submit', (e) => {
         if (!confirm('Move this asset to the recycle bin?')) {
             e.preventDefault();
@@ -183,15 +186,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Copy buttons
-    document.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.media-copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
             const targetId = btn.dataset.copyTarget;
             const input = document.getElementById(targetId);
-            input.select();
-            document.execCommand('copy');
-            
             const originalText = btn.textContent;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(input.value).catch(() => {
+                    input.select();
+                    document.execCommand('copy');
+                });
+            } else {
+                input.select();
+                document.execCommand('copy');
+            }
+
             btn.textContent = 'Copied!';
             setTimeout(() => {
                 btn.textContent = originalText;
@@ -199,35 +209,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Drag and drop upload zone trigger
     const uploadZone = document.getElementById('media-upload-zone');
     const uploadInput = document.getElementById('media-upload-input');
+    const uploadForm = document.querySelector('.media-upload-form');
 
-    if (uploadZone && uploadInput) {
+    function submitUpload() {
+        if (uploadInput.files.length > 0) {
+            uploadForm.submit();
+        }
+    }
+
+    if (uploadZone && uploadInput && uploadForm) {
         uploadZone.addEventListener('click', () => {
             uploadInput.click();
         });
 
-        uploadInput.addEventListener('change', () => {
-            if (uploadInput.files.length > 0) {
-                uploadZone.querySelector('form').submit();
+        uploadZone.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                uploadInput.click();
             }
         });
 
-        // Highlight drag and drop
+        uploadInput.addEventListener('change', () => {
+            submitUpload();
+        });
+
         ['dragenter', 'dragover'].forEach(eventName => {
             uploadZone.addEventListener(eventName, (e) => {
                 e.preventDefault();
-                uploadZone.style.borderColor = 'var(--amber)';
-                uploadZone.style.background = 'var(--amber-glow)';
+                uploadZone.classList.add('is-dragging');
             }, false);
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
             uploadZone.addEventListener(eventName, (e) => {
                 e.preventDefault();
-                uploadZone.style.borderColor = '';
-                uploadZone.style.background = '';
+                uploadZone.classList.remove('is-dragging');
             }, false);
         });
 
@@ -236,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const files = dt.files;
             if (files.length > 0) {
                 uploadInput.files = files;
-                uploadZone.querySelector('form').submit();
+                submitUpload();
             }
         });
     }
@@ -244,4 +262,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <?php
 $content = ob_get_clean();
-require dirname(__DIR__) . '/layout.php';
+require __DIR__ . '/layout.php';

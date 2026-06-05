@@ -107,7 +107,7 @@ fornesusart/
 │   │       ├── login.php
 │   │       ├── dashboard.php
 │   │       ├── messages.php
-│   │       ├── media.php          # Media library with drag-and-drop upload + details panel
+│   │       ├── media.php          # Media library with grid cards, upload zone, and details panel
 │   │       ├── trash.php          # Recycle bin
 │   │       ├── artworks/
 │   │       │   ├── index.php
@@ -160,7 +160,7 @@ fornesusart/
 | `/admin/exhibits` | Manage exhibits + artwork assignment |
 | `/admin/bio` | Manage bio sections |
 | `/admin/messages` | View contact form submissions |
-| `/admin/media` | Media library — drag-and-drop upload, details panel, copy URL/embed |
+| `/admin/media` | Media library — grid-based asset manager with upload zone, details panel, and copy URL/embed |
 | `/admin/trash` | Recycle bin for soft-deleted content |
 
 ## License

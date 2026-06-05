@@ -239,6 +239,56 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
 ### Unresolved Items Entering Phase 6
 - [ ] Decide whether to add email notifications for contact form submissions (carried over)
 
+---
+
+## Phase 6 — Codex (2026-06-04)
+
+### Admin UI Decisions
+- Reframed the Media Library from the earlier "Darkroom Gallery" split-view treatment into an admin-native asset manager so it inherits the same typography, controls, and hierarchy as the rest of `/admin/*`.
+- Standardized the shared admin header/navigation to read as administrative chrome rather than public-site navigation:
+  - Added explicit active-link states with `aria-current="page"`
+  - Shifted branding/navigation emphasis toward the existing metadata-style mono system
+  - Preserved all existing admin routes and labels
+- Added a page-level wide-content mode for the Media Library via `.admin-main-wide` instead of inline per-view CSS overrides.
+
+### Media Library Layout & Interaction Decisions
+- Rebuilt the Media Library into a grid-first workspace:
+  - Asset cards now show thumbnail, asset ID, MIME type, and upload date
+  - Selected asset details remain available in a secondary panel
+  - Upload zone remains drag-and-drop and click-to-browse
+  - Trash and permanent delete remain confirmation-gated
+- Replaced one-off inline success styling with a reusable `.admin-notice` pattern.
+- Updated copy controls to use the shared admin button/form language while preserving direct URL and HTML embed copying.
+- Added keyboard activation for the upload zone (`Enter` / `Space`) to improve accessibility.
+
+### Admin Layout Bugfix
+- Corrected multiple admin view layout includes so admin pages consistently render through `app/views/admin/layout.php` rather than accidentally resolving toward the public layout path.
+- Verified the corrected admin chrome rendering on representative routes:
+  - `/admin`
+  - `/admin/artworks`
+  - `/admin/media`
+  - `/admin/trash`
+
+### Files Updated (Phase 6)
+- `app/views/admin/layout.php` — active nav state, admin branding block, configurable body/main classes
+- `app/views/admin/media.php` — grid-first Media Library markup, reusable notice usage, wide main mode, keyboard-friendly upload zone
+- `public/assets/css/admin.css` — admin chrome refresh, wide main variant, media-card grid system, upload/details panel styling
+- `app/views/admin/dashboard.php` — corrected admin layout include path
+- `app/views/admin/trash.php` — corrected admin layout include path
+- `app/views/admin/artworks/index.php`, `form.php` — corrected admin layout include paths
+- `app/views/admin/categories/index.php`, `form.php` — corrected admin layout include paths
+- `app/views/admin/exhibits/index.php`, `form.php` — corrected admin layout include paths
+- `app/views/admin/bio/index.php`, `form.php` — corrected admin layout include paths
+
+### Verification Notes
+- PHP syntax checks passed for the updated admin layout and representative admin views.
+- Direct-render verification confirmed:
+  - admin body/nav markup is present
+  - active nav states render on current admin pages
+  - Media Library renders with `admin-main-wide`
+  - Media asset cards render in the expected grid markup
+
+
 <!-- Add a new dated section at the start of each phase following
      the same pattern. Resolved checkpoints from the prior phase
      should be marked [x] and left in place — do not delete them.
