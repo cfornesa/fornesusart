@@ -40,6 +40,7 @@ class AdminController
         admin_check();
         $artworkCount  = (int) db()->query('SELECT COUNT(*) FROM artworks  WHERE deleted_at IS NULL')->fetchColumn();
         $categoryCount = (int) db()->query('SELECT COUNT(*) FROM categories WHERE deleted_at IS NULL')->fetchColumn();
+        $exhibitCount  = (int) db()->query('SELECT COUNT(*) FROM exhibits  WHERE deleted_at IS NULL')->fetchColumn();
         $messageCount  = (int) db()->query('SELECT COUNT(*) FROM contact_messages')->fetchColumn();
         $trashCount    = Artwork::trashedCount() + Category::trashedCount() + Exhibit::trashedCount() + MediaFile::trashedCount();
         require dirname(__DIR__) . '/views/admin/dashboard.php';
@@ -581,6 +582,23 @@ class AdminController
         admin_check();
         $files = MediaFile::all();
         require dirname(__DIR__) . '/views/admin/media.php';
+    }
+
+    public static function mediaUpload(): void
+    {
+        admin_check();
+        if (!empty($_FILES['media_file']['name'])) {
+            try {
+                upload_image($_FILES['media_file']);
+                header('Location: /admin/media?uploaded=1');
+                exit;
+            } catch (\Exception $e) {
+                header('Location: /admin/media?error=' . urlencode($e->getMessage()));
+                exit;
+            }
+        }
+        header('Location: /admin/media');
+        exit;
     }
 
     public static function mediaTrash(string $id): void

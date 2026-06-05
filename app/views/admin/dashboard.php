@@ -14,6 +14,10 @@ ob_start();
             <span class="stat-label">Categories</span>
         </div>
         <div class="stat-card">
+            <span class="stat-num"><?= $exhibitCount ?></span>
+            <span class="stat-label">Exhibits</span>
+        </div>
+        <div class="stat-card">
             <span class="stat-num"><?= $messageCount ?></span>
             <span class="stat-label">Messages</span>
         </div>

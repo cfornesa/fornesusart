@@ -98,6 +98,7 @@ $routes = [
 
     // Admin media library
     ['GET',  '/admin/media',                           [AdminController::class, 'mediaIndex']],
+    ['POST', '/admin/media/upload',                    [AdminController::class, 'mediaUpload']],
     ['POST', '/admin/media/([0-9]+)/trash',            [AdminController::class, 'mediaTrash']],
     ['POST', '/admin/media/([0-9]+)/destroy',          [AdminController::class, 'mediaDestroy']],
 

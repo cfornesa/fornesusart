@@ -135,7 +135,9 @@
 
 2026-06-04 · TENSION · Chose the hybrid of Astral Catalog (floating void, catalog numbering) and Living Manuscript (archaic type, otherworldly artifact) when presented with three distinct directions — neither pure cosmic minimalism nor pure historical pastiche, but both at once.
 
-2026-06-04 · DIRECTION · Artwork thumbnails in the gallery should be at irregular scales and positions — not snapped to a rigid grid.
+2026-06-04 · DIRECTION · Artwork thumbnails in the gallery should be at irregular scales and positions — not snapped to a grid.
+
+2026-06-04 · DIRECTION · Redesigned the admin Media Library to align with the "Celestial Archive" darkroom aesthetics, featuring a custom split layout, glowing image tiles, and deep crimson outlined danger buttons.
 
 ---
 

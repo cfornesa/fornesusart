@@ -154,6 +154,91 @@ options regardless of session context. -->
 
 ---
 
+---
+
+## Phase 4 — Claude Code (2026-06-04)
+
+### Blob Storage Migration
+
+Images are now stored directly in the database as LONGBLOBs rather than on the filesystem. The `media_files` table previously stored file paths (`path`, `subfolder`); those columns have been dropped. All image serving goes through `/image/[id]`.
+
+**Motivation:** Simplify the stack — no filesystem dependency for media, no uploads directory to manage or back up separately, no path-reference synchronisation needed.
+
+### Schema Changes
+- `media_files`: added `data LONGBLOB NULL`, `mime_type VARCHAR(50) NULL`; dropped `path` and `subfolder`
+- Migration files: `migrate_phase4_blob.sql` (adds columns), `migrate_phase4_cleanup.sql` (drops legacy columns)
+- Data migration: `migrate_images_to_blob.php` — reads files from `public/uploads/`, writes BLOBs to DB, rewrites path references in `artworks`, `categories`, `exhibits`
+
+### New Route
+- `GET /image/[id]` — served by `ImageController::serve()`; returns binary blob with correct `Content-Type`, `ETag`, and `Cache-Control: immutable` headers. Returns 404 if blob is NULL, deleted, or id invalid.
+
+### Files Created (Phase 4)
+- `app/controllers/ImageController.php` — blob image serving
+- `migrate_phase4_blob.sql` — schema migration (adds columns)
+- `migrate_phase4_cleanup.sql` — cleanup migration (drops `path`, `subfolder`)
+- `migrate_images_to_blob.php` — one-time data migration CLI script
+
+### Files Updated (Phase 4)
+- `app/models/MediaFile.php` — `create()` now takes `(string $data, string $mimeType)`; `getData()` method added; all listing queries exclude blob column; `hardDelete()` no longer touches filesystem
+- `app/helpers/upload.php` — stores blob via `MediaFile::create()`; returns `/image/{id}`; `SET SESSION max_allowed_packet` wrapped in try/catch (MariaDB 11+ made it read-only at session level)
+- `app/views/admin/media.php` — thumbnails via `/image/{id}`; filename display replaced with ID + mime type (path column gone)
+- `app/views/admin/trash.php` — removed references to `path` and `subfolder` columns
+- `public/index.php` — added `cli-server` static file handler (required for PHP built-in server to serve CSS/JS); added `/image/([0-9]+)` route
+- `public/assets/css/admin.css` — responsive media grid (single column mobile, two columns ≥768px); button `appearance: none` override for macOS/Safari native rendering
+- `app/controllers/AdminController.php` — dashboard now includes `$exhibitCount`
+- `app/views/admin/dashboard.php` — Exhibits stat card added
+
+### Operational Notes
+- Remote server is **MariaDB 11.8.6**, not MySQL. Use `--column-statistics=0` with `mysqldump` from MySQL client 8.x.
+- `max_allowed_packet` on the server is 1 GB; the session-level SET is unnecessary and errors on MariaDB 11+.
+- `public/uploads/categorys/` and `public/uploads/thumbnails/` deleted from disk after migration.
+- PHP built-in dev server requires the router argument: `php -S localhost:8000 -t public public/index.php`
+
+### Unresolved Items Entering Phase 5
+- [x] Media Library UI: button styling not applying in Safari (appearance: none served correctly but not rendering; under active investigation)
+- [x] Media Library UI: fuller redesign deferred — type labels, sort, context ("used by"), original filename storage
+
+---
+
+## Phase 5 — Antigravity (2026-06-04)
+
+### New URL Structure Confirmed
+- `POST /admin/media/upload` — Direct media file upload endpoint
+
+### Layout & Formatting Decisions
+- Redesigned the Media Library into a dual-pane "Darkroom Gallery" split-view workspace:
+  - Left pane: Spacious grid of aspect-ratio 1:1 square image tiles (140px minimum width) with subtle grayscale filters, spotlight vignette overlays, and zoom animations on hover.
+  - Right pane: Sticky details panel with a radial gradient preview canvas displaying ID, MIME type, upload timestamp, and action buttons.
+  - Added a drag-and-drop / file upload zone at the top of the grid with display headings.
+  - Responsive alignment: Dual-pane split on screens ≥ 900px, stacking vertically on smaller screens.
+  - Expanded layout: Overrode `.admin-main` container max-width to `1200px` on this page to provide optimal grid space.
+- CSS Cache-buster: Added dynamic `filemtime` query cache busters to style sheets in `app/views/admin/layout.php` to force instant client updates.
+
+### Button Style & Compatibility Decisions
+- Standardized copyable inputs: Enclosed URLs and HTML tags in a `.media-code-input-wrap` that joins the input field and a left-bordered Copy button with no gap, sharing a border and aligning to the exact pixel.
+- Unified action buttons: Standardized full-height `.admin-btn` (gold) and `.admin-btn-danger` (crimson) outline buttons to stretch to the exact dimensions of the details forms.
+- Applied `-webkit-appearance: none` and `border-radius: 0` to all button styles, satisfying the "no rounded corners" design constraint and resolving native Safari rendering inconsistencies.
+- Cleaned up Recycle Bin count badge styles to use `border-radius: 0`.
+
+### Files Created (Phase 5)
+- None
+
+### Files Updated (Phase 5)
+- `public/index.php` — Registered the POST route for `/admin/media/upload`
+- `app/controllers/AdminController.php` — Implemented `mediaUpload()` method
+- `app/views/admin/layout.php` — Added `filemtime`-based cache busters to CSS stylesheets
+- `app/views/admin/media.php` — Entirely rewritten to implement the split view layout and clipboard copying / drop zone logic
+- `public/assets/css/admin.css` — Standardized danger button classes and designed split-workspace, tiles, and upload-zone styles
+
+### Vendor Dependencies Added
+- None
+
+### Environment Variables Required
+- None
+
+### Unresolved Items Entering Phase 6
+- [ ] Decide whether to add email notifications for contact form submissions (carried over)
+
 <!-- Add a new dated section at the start of each phase following
      the same pattern. Resolved checkpoints from the prior phase
      should be marked [x] and left in place — do not delete them.

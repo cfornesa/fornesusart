@@ -5,15 +5,15 @@ Personal art gallery site. PHP + MySQL, no framework.
 ## Development
 
 ```bash
-php -S localhost:8000 -t public
+php -S localhost:8000 -t public public/index.php
 ```
 
-The site will be at `http://localhost:8000`.
+The router script argument is required — without it, PHP's built-in server won't handle clean URLs. The site will be at `http://localhost:8000`.
 
 ## Requirements
 
 - PHP 8.1+
-- MySQL 8+
+- MySQL 8+ or MariaDB 10.6+
 - Apache with `mod_rewrite` (or Nginx with equivalent `try_files` config)
 
 ## Setup
@@ -39,7 +39,11 @@ The site will be at `http://localhost:8000`.
 
 4. Create the database and run the schema:
    - **Fresh install:** Import `schema.sql` via phpMyAdmin (Import tab) or your MySQL client.
-   - **Existing database:** Import `migrate_phase2.sql` instead to apply only the Phase 2 changes.
+   - **Existing database (pre-Phase 4):** Run migrations in order:
+     1. `migrate_phase2.sql` — adds categories/exhibits schema (skip if already on Phase 2+)
+     2. `migrate_phase4_blob.sql` — adds `data` and `mime_type` columns to `media_files`
+     3. Run `php -d memory_limit=256M migrate_images_to_blob.php` to move existing files to the database
+     4. `migrate_phase4_cleanup.sql` — drops the legacy `path` and `subfolder` columns (run last, after verifying the script output)
 
 5. Point your web server's `DocumentRoot` to the `public/` directory. If your server is configured at the project root instead, the root `.htaccess` will redirect traffic into `public/` automatically.
 
@@ -69,7 +73,7 @@ fornesusart/
 │   │   ├── js/
 │   │   │   └── main.js            # Gallery, form, and drag-and-drop behaviour
 │   │   └── fonts/                 # Self-hosted font fallbacks (optional)
-│   └── uploads/                   # Uploaded artwork images (git-ignored)
+│   └── uploads/                   # Legacy upload directory (now empty — images stored in DB)
 │       └── .htaccess              # Blocks PHP execution in this directory
 ├── app/
 │   ├── bootstrap.php              # Env loading, session start, autoloader
@@ -81,11 +85,13 @@ fornesusart/
 │   │   ├── AboutController.php    # /about + contact form
 │   │   ├── CategoriesController.php  # /categories and /category/[slug]
 │   │   ├── ExhibitController.php  # /exhibit/[slug]
+│   │   ├── ImageController.php    # /image/[id] — serves blobs from DB
 │   │   └── AdminController.php    # All /admin/* routes
 │   ├── models/
 │   │   ├── Artwork.php
 │   │   ├── Category.php
 │   │   ├── Exhibit.php
+│   │   ├── MediaFile.php          # BLOB storage, getData(), create(blob, mime)
 │   │   └── BioSection.php
 │   ├── views/
 │   │   ├── layout.php             # Shared header and footer
@@ -101,6 +107,8 @@ fornesusart/
 │   │       ├── login.php
 │   │       ├── dashboard.php
 │   │       ├── messages.php
+│   │       ├── media.php          # Media library with drag-and-drop upload + details panel
+│   │       ├── trash.php          # Recycle bin
 │   │       ├── artworks/
 │   │       │   ├── index.php
 │   │       │   └── form.php       # Create + edit (same view)
@@ -115,12 +123,15 @@ fornesusart/
 │   │           └── form.php       # Create + edit (same view)
 │   └── helpers/
 │       ├── auth.php               # Admin session gate
-│       ├── upload.php             # MIME-validated file upload
+│       ├── upload.php             # MIME-validated blob upload, returns /image/{id}
 │       └── slugify.php            # Title-to-slug utility
 ├── docs/
 │   └── dependencies.md            # Register of external dependencies
 ├── schema.sql                     # Full database schema (fresh installs)
-├── migrate_phase2.sql             # Phase 2 migration (existing databases)
+├── migrate_phase2.sql             # Phase 2 migration
+├── migrate_phase4_blob.sql        # Phase 4 migration — adds blob columns
+├── migrate_phase4_cleanup.sql     # Phase 4 cleanup — drops legacy path/subfolder columns
+├── migrate_images_to_blob.php     # One-time data migration CLI script
 ├── env.example                    # Environment variable template
 └── .env                           # Your local config — never committed
 ```
@@ -137,17 +148,20 @@ fornesusart/
 | `/exhibit/[slug]` | Individual exhibit with artworks |
 | `/work/[slug]` | Individual artwork |
 | `/about` | Bio + contact form |
+| `/image/[id]` | Serves an image blob from the database |
 
 ### Admin
 
 | URL | Page |
 |-----|------|
-| `/admin` | Dashboard |
+| `/admin` | Dashboard — Works, Categories, Exhibits, Messages, Trash counts |
 | `/admin/artworks` | Manage artworks |
 | `/admin/categories` | Manage categories |
 | `/admin/exhibits` | Manage exhibits + artwork assignment |
 | `/admin/bio` | Manage bio sections |
 | `/admin/messages` | View contact form submissions |
+| `/admin/media` | Media library — drag-and-drop upload, details panel, copy URL/embed |
+| `/admin/trash` | Recycle bin for soft-deleted content |
 
 ## License
 
