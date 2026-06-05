@@ -1,3 +1,41 @@
+/* ─── Self-Hosted Fonts ───────────────────────────────────────────────────── */
+
+@font-face {
+    font-family: 'Pinyon Script';
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url('/assets/fonts/pinyon-script-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Lora';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: block;
+    src: url('/assets/fonts/lora-normal-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Lora';
+    font-style: italic;
+    font-weight: 400 700;
+    font-display: block;
+    src: url('/assets/fonts/lora-italic-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Courier Prime';
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url('/assets/fonts/courier-prime-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* ─── Tokens ──────────────────────────────────────────────────────────────── */
 
 :root {
@@ -14,7 +52,12 @@
     --nebula-deep:  rgba(40, 55, 160, 1);
     --nebula-violet: rgba(80, 30, 130, 1);
 
-    --font-display: 'Cinzel Decorative', 'Times New Roman', serif;
+    /* Vibrant, low-resource watercolor nebula palette */
+    --nebula-magenta: rgba(210, 45, 140, 0.28);
+    --nebula-cyan:    rgba(0, 180, 210, 0.25);
+    --nebula-gold:    rgba(215, 145, 45, 0.22);
+
+    --font-display: 'Pinyon Script', 'Lora', cursive;
     --font-body:    'Lora', Georgia, serif;
     --font-mono:    'Courier Prime', 'Courier New', monospace;
 
@@ -97,7 +140,7 @@ body::before {
     inset: 0;
     pointer-events: none;
     z-index: -1;
-    background-color: var(--black);
+    background-color: transparent;
     background-image:
         /* ── Nebula atmosphere ── */
         radial-gradient(ellipse 65% 45% at 25% 35%, rgba(40, 55, 160, 0.07) 0%, transparent 70%),
@@ -180,20 +223,84 @@ body::before {
         );
 }
 
-body::after {
-    content: '';
+#celestial-background {
     position: fixed;
-    inset: -10%;
+    inset: 0;
     pointer-events: none;
-    z-index: -1;
-    background-image:
-        radial-gradient(ellipse 38% 28% at 20% 24%, rgba(50, 90, 170, 0.10) 0%, transparent 72%),
-        radial-gradient(ellipse 34% 26% at 78% 20%, rgba(110, 55, 155, 0.08) 0%, transparent 70%),
-        radial-gradient(ellipse 42% 30% at 65% 72%, rgba(40, 85, 170, 0.07) 0%, transparent 74%);
-    filter: blur(18px);
-    opacity: 0.45;
-    animation: nebula-drift 38s ease-in-out infinite;
+    z-index: -3;
+    overflow: hidden;
+    background-color: var(--black);
 }
+
+.nebula-wash {
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+    filter: blur(80px);
+    mix-blend-mode: screen;
+    will-change: transform, opacity;
+}
+
+.nebula-wash--1 {
+    background: radial-gradient(circle at 30% 25%, var(--nebula-cyan) 0%, transparent 60%);
+    animation: nebula-drift-1 55s ease-in-out infinite alternate;
+}
+
+.nebula-wash--2 {
+    background: radial-gradient(circle at 75% 65%, var(--nebula-magenta) 0%, transparent 60%);
+    animation: nebula-drift-2 65s ease-in-out infinite alternate;
+}
+
+.nebula-wash--3 {
+    background: radial-gradient(circle at 45% 85%, var(--nebula-gold) 0%, transparent 55%);
+    animation: nebula-drift-3 75s ease-in-out infinite alternate;
+}
+
+@keyframes nebula-drift-1 {
+    0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.35; }
+    100% { transform: translate3d(5%, 3%, 0) scale(1.15); opacity: 0.75; }
+}
+
+@keyframes nebula-drift-2 {
+    0% { transform: translate3d(0, 0, 0) scale(1.1); opacity: 0.45; }
+    100% { transform: translate3d(-4%, 5%, 0) scale(0.95); opacity: 0.85; }
+}
+
+@keyframes nebula-drift-3 {
+    0% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.25; }
+    100% { transform: translate3d(3%, -5%, 0) scale(1.1); opacity: 0.65; }
+}
+
+.astrolabe-grid {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 85vmax;
+    height: 85vmax;
+    max-width: 950px;
+    max-height: 950px;
+    pointer-events: none;
+    z-index: -2;
+    opacity: 0.16;
+    animation: astrolabe-rotation 300s linear infinite;
+    will-change: transform;
+}
+
+@keyframes astrolabe-rotation {
+    from { transform: translate3d(-50%, -50%, 0) rotate(0deg); }
+    to { transform: translate3d(-50%, -50%, 0) rotate(360deg); }
+}
+
+/* Reduced-motion overrides for celestial elements */
+.low-power .nebula-wash,
+.low-power .astrolabe-grid {
+    animation: none !important;
+}
+
+.low-power .nebula-wash--1 { opacity: 0.55; }
+.low-power .nebula-wash--2 { opacity: 0.65; }
+.low-power .nebula-wash--3 { opacity: 0.45; }
+.low-power .astrolabe-grid { opacity: 0.12; transform: translate3d(-50%, -50%, 0) rotate(15deg); }
 
 img { display: block; max-width: 100%; height: auto; }
 a   { color: inherit; text-decoration: none; }
@@ -225,14 +332,29 @@ a   { color: inherit; text-decoration: none; }
 
 /* ─── Cosmos JS layer ─────────────────────────────────────────────────────── */
 
-/* Pulsating DOM star container — contain: layout paint isolates repaints */
 #cosmos-stars {
     position: fixed;
-    inset: 0;
+    top: 50%;
+    left: 50%;
+    width: 150vmax;
+    height: 150vmax;
+    transform: translate3d(-50%, -50%, 0);
     pointer-events: none;
     z-index: -1;
     overflow: hidden;
     contain: layout paint;
+    animation: star-rotation 60s linear infinite;
+    will-change: transform;
+}
+
+@keyframes star-rotation {
+    from { transform: translate3d(-50%, -50%, 0) rotate(0deg); }
+    to { transform: translate3d(-50%, -50%, 0) rotate(360deg); }
+}
+
+.low-power #cosmos-stars {
+    animation: none !important;
+    transform: translate3d(-50%, -50%, 0) rotate(0deg) !important;
 }
 
 .cosmos-star {
@@ -288,14 +410,17 @@ a   { color: inherit; text-decoration: none; }
     pointer-events: none;
 }
 
+/* site title with cursive adjustments */
 .site-title {
     font-family: var(--font-display);
-    font-size: clamp(1.4rem, 3.2vw, 2.4rem);
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    font-size: clamp(2.2rem, 4.8vw, 3.5rem);
+    font-weight: 400;
+    letter-spacing: 0.01em;
     color: var(--amber);
     transition: opacity 0.2s;
     animation: celestial-breathe 14s ease-in-out infinite;
+    text-transform: none;
+    font-variant-caps: normal;
 }
 .site-title:hover { opacity: 0.75; }
 
@@ -394,12 +519,13 @@ main { flex: 1; }
 
 .category-name {
     font-family: var(--font-display);
-    font-size: clamp(1rem, 2.2vw, 1.4rem);
+    font-size: clamp(1.5rem, 2.8vw, 2rem);
     font-weight: 400;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.02em;
     color: var(--parchment);
     flex: 1;
-    font-variant-caps: small-caps;
+    font-variant-caps: normal;
+    text-transform: none;
 }
 
 .section-rule {
@@ -654,13 +780,14 @@ main { flex: 1; }
 
 .work-title {
     font-family: var(--font-display);
-    font-size: clamp(1.4rem, 4vw, 2.6rem);
+    font-size: clamp(2rem, 5vw, 3.2rem);
     font-weight: 400;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.02em;
     line-height: 1.2;
     color: var(--parchment);
     margin-bottom: 0.8rem;
-    font-variant-caps: small-caps;
+    font-variant-caps: normal;
+    text-transform: none;
 }
 
 .work-meta-line {
@@ -703,11 +830,13 @@ main { flex: 1; }
 
 .page-title {
     font-family: var(--font-display);
-    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-size: clamp(2.2rem, 5.5vw, 3.5rem);
     font-weight: 400;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     color: var(--amber);
     text-wrap: balance;
+    font-variant-caps: normal;
+    text-transform: none;
 }
 
 .bio-section,
@@ -716,15 +845,15 @@ main { flex: 1; }
 .bio-heading,
 .page-section-heading {
     font-family: var(--font-display);
-    font-size: clamp(0.85rem, 1.8vw, 1.1rem);
+    font-size: clamp(1.4rem, 2.5vw, 1.8rem);
     font-weight: 400;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-transform: none;
     color: var(--amber);
     margin-bottom: 1.1rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--amber-border);
-    font-variant-caps: small-caps;
+    font-variant-caps: normal;
 }
 
 .bio-text,
@@ -853,11 +982,12 @@ main { flex: 1; }
 
 .collection-title {
     font-family: var(--font-display);
-    font-size: clamp(1.2rem, 3vw, 2rem);
+    font-size: clamp(1.6rem, 3.5vw, 2.5rem);
     font-weight: 400;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.02em;
     color: var(--parchment);
-    font-variant-caps: small-caps;
+    font-variant-caps: normal;
+    text-transform: none;
 }
 
 .collection-grid {
@@ -1103,11 +1233,12 @@ main { flex: 1; }
 
 .collection-detail-title {
     font-family: var(--font-display);
-    font-size: clamp(1.2rem, 3vw, 2rem);
+    font-size: clamp(1.6rem, 3.5vw, 2.5rem);
     font-weight: 400;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     margin-bottom: 1rem;
-    font-variant-caps: small-caps;
+    font-variant-caps: normal;
+    text-transform: none;
 }
 .collection-detail-desc {
     font-family: var(--font-body);
@@ -1140,7 +1271,7 @@ main { flex: 1; }
     border: 1px solid var(--amber-border);
     color: var(--amber);
     cursor: pointer;
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-size: 0.72rem;
     letter-spacing: 0.2em;
     padding: 0.7rem 2.5rem;

@@ -28,14 +28,33 @@
         var count = lowPowerMode ? 14 : 28;
 
         for (var i = 0; i < count; i++) {
-            var isAmber  = Math.random() < 0.35;
             var isBright = Math.random() < 0.07;
             var size     = isBright
                 ? (2 + Math.random() * 1.2)
                 : (0.7 + Math.random() * 0.9);
 
             var star = document.createElement('span');
-            star.className = 'cosmos-star cosmos-star--' + (isAmber ? 'amber' : 'cold');
+            star.className = 'cosmos-star';
+
+            // Select color based on astrophysical spectral distribution
+            var rand = Math.random();
+            var color, glowColor;
+            if (rand < 0.08) { // O/B class blue-white stars
+                color = 'rgba(165, 195, 255, 1)';
+                glowColor = 'rgba(165, 195, 255, 0.45)';
+            } else if (rand < 0.22) { // A class white stars
+                color = 'rgba(255, 255, 255, 1)';
+                glowColor = 'rgba(255, 255, 255, 0.5)';
+            } else if (rand < 0.42) { // F/G class golden stars
+                color = 'rgba(255, 220, 130, 1)';
+                glowColor = 'rgba(255, 220, 130, 0.4)';
+            } else if (rand < 0.72) { // K class orange stars
+                color = 'rgba(255, 170, 90, 1)';
+                glowColor = 'rgba(255, 170, 90, 0.35)';
+            } else { // M class red-orange stars
+                color = 'rgba(255, 110, 80, 1)';
+                glowColor = 'rgba(255, 110, 80, 0.3)';
+            }
 
             // Slow durations: 10–24 s — gentle shimmer, not a flicker
             var duration = lowPowerMode ? (14 + Math.random() * 16) : (10 + Math.random() * 14);
@@ -46,6 +65,8 @@
                 'top:'                + (Math.random() * 100).toFixed(1) + '%;' +
                 'width:'              + size.toFixed(1) + 'px;'                  +
                 'height:'             + size.toFixed(1) + 'px;'                  +
+                'background:'         + color + ';'                              +
+                'box-shadow: 0 0 4px 1px ' + glowColor + ';'                     +
                 'animation-duration:' + duration.toFixed(1) + 's;'               +
                 'animation-delay:'    + delay.toFixed(1) + 's;';
 
@@ -99,20 +120,36 @@
     var loopRunning   = false;
 
     function spawnShootingStar() {
-        var angle       = (Math.PI / 7) + Math.random() * (Math.PI / 5.5);
-        var speed       = 9 + Math.random() * 11;
-        var tailLen     = 90 + Math.random() * 160;
-        var totalFrames = 50 + Math.floor(Math.random() * 30);
+        var maxDim = Math.min(window.innerWidth, window.innerHeight);
+        // Position at a random radius from the viewport center
+        var r = maxDim * (0.15 + Math.random() * 0.4);
+        var theta = Math.random() * Math.PI * 2;
+        
+        // Exact 10 seconds for one full 360deg rotation (600 frames at 60fps)
+        var totalFrames = 600;
+        var omega = (2 * Math.PI) / totalFrames;
+        
+        // Clockwise rotation (matching the star field rotation path)
+        var direction = 1;
+        var dr = 0; // perfect circle
+        
+        // Noticeable trail length (45 frames)
+        var maxHistory = 45;
+        
+        // Starting color hue
+        var startHue = Math.random() * 360;
 
         shootingStars.push({
-            x:           Math.random() * window.innerWidth  * 0.82,
-            y:           Math.random() * window.innerHeight * 0.32,
-            dx:          Math.cos(angle) * speed,
-            dy:          Math.sin(angle) * speed,
-            tailLen:     tailLen,
-            frame:       0,
+            r: r,
+            theta: theta,
+            omega: omega,
+            direction: direction,
+            dr: dr,
+            frame: 0,
             totalFrames: totalFrames,
-            angle:       angle,
+            history: [],
+            maxHistory: maxHistory,
+            hue: startHue
         });
 
         if (!loopRunning) {
@@ -122,46 +159,73 @@
     }
 
     function drawShootingStars() {
+        // Dynamic viewport center
+        var cx = window.innerWidth / 2;
+        var cy = window.innerHeight / 2;
+
         for (var i = shootingStars.length - 1; i >= 0; i--) {
-            var s        = shootingStars[i];
+            var s = shootingStars[i];
+            
+            // Calculate current coordinate in orbital path around viewport center
+            var x = cx + s.r * Math.cos(s.theta);
+            var y = cy + s.r * Math.sin(s.theta);
+            
+            s.history.push({x: x, y: y});
+            if (s.history.length > s.maxHistory) {
+                s.history.shift();
+            }
+
             var progress = s.frame / s.totalFrames;
-            var alpha    = progress < 0.12
-                ? progress / 0.12
-                : progress > 0.62
-                    ? (1 - progress) / 0.38
+            // Fade in over first 10%, fade out over last 15% of the circle
+            var alpha = progress < 0.1
+                ? progress / 0.1
+                : progress > 0.85
+                    ? (1 - progress) / 0.15
                     : 1;
 
-            var currentTail = s.tailLen * Math.min(progress * 3.5, 1);
-            var tx = s.x - Math.cos(s.angle) * currentTail;
-            var ty = s.y - Math.sin(s.angle) * currentTail;
+            if (s.history.length > 1) {
+                var tailStart = s.history[0];
+                var tg = ctx.createLinearGradient(tailStart.x, tailStart.y, x, y);
+                
+                var hue1 = Math.floor(s.hue);
+                var hue2 = Math.floor(s.hue + 25) % 360; // slight color shift along tail
+                
+                tg.addColorStop(0,    'hsla(' + hue1 + ', 100%, 65%, 0)');
+                tg.addColorStop(0.5,  'hsla(' + hue1 + ', 100%, 65%, ' + (alpha * 0.35) + ')');
+                tg.addColorStop(0.85, 'hsla(' + hue2 + ', 100%, 75%, ' + (alpha * 0.75) + ')');
+                tg.addColorStop(1,    'hsla(' + hue2 + ', 100%, 90%, ' + alpha + ')');
 
-            var tg = ctx.createLinearGradient(tx, ty, s.x, s.y);
-            tg.addColorStop(0,    'rgba(200,155,60,0)');
-            tg.addColorStop(0.45, 'rgba(220,195,110,' + (alpha * 0.28) + ')');
-            tg.addColorStop(0.82, 'rgba(255,245,190,' + (alpha * 0.70) + ')');
-            tg.addColorStop(1,    'rgba(255,255,240,' + alpha + ')');
+                ctx.beginPath();
+                ctx.strokeStyle = tg;
+                ctx.lineWidth = 2.6; // Thicker, more noticeable line
+                ctx.moveTo(tailStart.x, tailStart.y);
+                for (var j = 1; j < s.history.length; j++) {
+                    ctx.lineTo(s.history[j].x, s.history[j].y);
+                }
+                ctx.stroke();
+            }
 
-            ctx.beginPath();
-            ctx.strokeStyle = tg;
-            ctx.lineWidth   = 1.6;
-            ctx.moveTo(tx, ty);
-            ctx.lineTo(s.x, s.y);
-            ctx.stroke();
-
-            var hg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 5);
-            hg.addColorStop(0, 'rgba(255,255,240,' + alpha + ')');
-            hg.addColorStop(0.4, 'rgba(255,235,140,' + (alpha * 0.7) + ')');
-            hg.addColorStop(1, 'rgba(200,155,60,0)');
+            var headHue = Math.floor(s.hue + 25) % 360;
+            var hg = ctx.createRadialGradient(x, y, 0, x, y, 7);
+            hg.addColorStop(0, 'rgba(255, 255, 255, ' + alpha + ')');
+            hg.addColorStop(0.35, 'hsla(' + headHue + ', 100%, 80%, ' + (alpha * 0.8) + ')');
+            hg.addColorStop(1, 'hsla(' + headHue + ', 100%, 60%, 0)');
+            
             ctx.fillStyle = hg;
             ctx.beginPath();
-            ctx.arc(s.x, s.y, 5, 0, Math.PI * 2);
+            ctx.arc(x, y, 7, 0, Math.PI * 2);
             ctx.fill();
 
-            s.x    += s.dx;
-            s.y    += s.dy;
+            // Shift HSL hue dynamically
+            s.hue = (s.hue + 1) % 360;
+
+            // Orbit updates (clockwise)
+            s.theta += s.omega * s.direction;
             s.frame++;
 
-            if (s.frame >= s.totalFrames) shootingStars.splice(i, 1);
+            if (s.frame >= s.totalFrames) {
+                shootingStars.splice(i, 1);
+            }
         }
     }
 

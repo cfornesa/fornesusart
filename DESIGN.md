@@ -139,6 +139,10 @@
 
 2026-06-04 · DIRECTION · Redesigned the admin Media Library to align with the "Celestial Archive" darkroom aesthetics, featuring a custom split layout, glowing image tiles, and deep crimson outlined danger buttons.
 
+2026-06-04 · DIRECTION · Chose Pinyon Script (elegant copperplate calligraphy) for site-wide headings, paired with Lora for a highly stylized handwritten manuscript aesthetic.
+
+2026-06-04 · DIRECTION · Requested a more colorful, combined celestial background featuring watercolor washes, dynamic nebulas, and coordinate grids while strictly enforcing hardware-accelerated, zero-repaint animations to preserve mobile device battery/resources.
+
 ---
 
 <!-- The agent holds the brush. You choose what gets painted.

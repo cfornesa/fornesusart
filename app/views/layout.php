@@ -37,12 +37,24 @@
         <meta name="twitter:image:alt" content="<?= htmlspecialchars($resolvedImageAlt) ?>">
     <?php endif ?>
     <script>document.documentElement.classList.add('js-enhanced');</script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Lora:ital,wght@0,400..700;1,400..700&family=Courier+Prime&display=swap" rel="stylesheet">
+    <link rel="preload" href="/assets/fonts/lora-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/pinyon-script-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/css/style.css?v=<?= filemtime(dirname(__DIR__, 2) . '/public/assets/css/style.css') ?>">
 </head>
 <body>
+    <div id="celestial-background" aria-hidden="true">
+        <div class="nebula-wash nebula-wash--1"></div>
+        <div class="nebula-wash nebula-wash--2"></div>
+        <div class="nebula-wash nebula-wash--3"></div>
+        <svg class="astrolabe-grid" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="48" fill="none" stroke="var(--amber-border)" stroke-width="0.1" stroke-dasharray="1 3" />
+            <circle cx="50" cy="50" r="35" fill="none" stroke="var(--amber-border)" stroke-width="0.1" />
+            <circle cx="50" cy="50" r="20" fill="none" stroke="var(--amber-border)" stroke-width="0.08" stroke-dasharray="2 1" />
+            <line x1="50" y1="2" x2="50" y2="98" stroke="var(--amber-border)" stroke-width="0.05" />
+            <line x1="2" y1="50" x2="98" y2="50" stroke="var(--amber-border)" stroke-width="0.05" />
+            <path d="M 16 16 L 84 84 M 84 16 L 16 84" stroke="var(--amber-border)" stroke-dasharray="1 5" stroke-width="0.05" />
+        </svg>
+    </div>
     <a href="#main-content" class="skip-link">Skip to content</a>
     <header class="site-header">
         <a href="/" class="site-title"><?= htmlspecialchars($siteName) ?></a>

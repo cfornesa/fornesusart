@@ -1,13 +1,12 @@
 # External Dependencies
 
-## Google Fonts CDN
+No external network or CDN dependencies are used. All assets, scripts, and fonts are self-hosted locally to preserve visitor privacy and protect against off-domain service outages.
 
-| Item | Value |
-|------|-------|
-| Purpose | Serving Cinzel Decorative, Lora, Courier Prime typefaces |
-| Off-domain data | Yes — font requests include visitor IP address |
-| What breaks if unavailable | Fonts fall back to system serif/monospace; layout and aesthetic degrade but site remains functional |
-| Self-hosting alternative | Download font files and place in `public/assets/fonts/`; update `@font-face` rules in `style.css` |
-| Cost | Free |
+## Self-Hosted Fonts
 
-To self-host: download from fonts.google.com, place `.woff2` files in `public/assets/fonts/`, add `@font-face` declarations at the top of `public/assets/css/style.css`.
+All typefaces are stored locally as `.woff2` files in `public/assets/fonts/` and registered via `@font-face` rules in `public/assets/css/style.css`:
+
+- **Lora**: Used for regular body text (`Lora`, Georgia, serif).
+- **Pinyon Script**: Used for elegant headings (`Pinyon Script`, `Lora`, cursive).
+- **Courier Prime**: Used for monospace code/metadata elements (`Courier Prime`, `Courier New`, monospace).
+

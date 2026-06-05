@@ -336,6 +336,37 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
 - `docs/dependencies.md`, `README.md` — updated font dependency and architecture docs
 
 
+## Phase 8 — Codex (2026-06-04)
+
+### Typography & Self-Hosting Decisions
+- Migrated all web fonts to local hosting to completely remove Google Fonts CDN off-domain requests, protecting visitor IP privacy and preventing outage dependencies.
+- Placed `.woff2` files for `Lora`, `Pinyon Script`, and `Courier Prime` under `public/assets/fonts/` and registered them using `@font-face` blocks at the top of `style.css` with `font-display: block`.
+- Added high-priority HTML `<link rel="preload">` tags to layout files to completely resolve FOUT (Flash of Unstyled Text).
+- Changed regular text font-family to `'Lora', Georgia, serif` site-wide.
+- Changed heading text font-family to `'Pinyon Script', 'Lora', cursive` site-wide.
+- Adjusted letter-spacing, font-weight, text-transform, and font-variant properties across all headings (`.site-title`, `.category-name`, `.work-title`, `.page-title`, etc. in both public and admin stylesheets) to align with Pinyon Script's calligraphic script aesthetics.
+- Updated administrative buttons (e.g. login form button, see-more button) to use the monospace `Courier Prime` font for consistency and legibility.
+
+### Colorful & High-Performance Background Decisions
+- Replaced the simple static background nebulas with a composite celestial atmosphere.
+- Created `#celestial-background` with three slow-drifting, low-opacity `.nebula-wash` elements in colors `cyan`, `magenta`, and `gold`. These blend dynamically via `mix-blend-mode: screen` to form a rich, shifting watercolor nebula color scheme.
+- Added a thin, vector-drawn SVG astrolabe/coordinate grid (`.astrolabe-grid`) rotating extremely slowly (300s duration) behind the static star field.
+- Animated the `#cosmos-stars` container to rotate clockwise slowly (60s loop duration) around the center, creating a realistic celestial rotation.
+- Rescaled `#cosmos-stars` to a square of `150vmax` to ensure complete coverage of the screen diagonals at all angles of rotation.
+- Refactored canvas shooting stars into highly noticeable, clockwise, 10-second orbital comets that share the stars' center of rotation (the viewport center), doing exactly one full 360-degree loop before fading out.
+- Scaled comet linear speeds proportionally to their orbit radius ($v = R \cdot \omega$) to maintain a constant 10-second orbital cycle (making outer comets sweep faster and inner comets sweep slower).
+- Implemented smooth dynamic HSL color-shifting along the comets' curved coordinate history paths for a vibrant celestial aesthetic.
+- Integrated all visuals using CSS `transform: translate3d()` and `opacity` animations only, ensuring full hardware acceleration and negligible device resource utilization.
+- Modified `cosmos.js` to assign colors based on astrophysical spectral distributions (O, B, A, F, G, K, M types: blue-white, white, golden, orange, and red-orange) for twinkling star nodes.
+
+### Files Updated (Phase 8)
+- `docs/dependencies.md` — removed Google Fonts CDN, documented self-hosted typefaces
+- `app/views/layout.php` — removed CDN fonts, added `#celestial-background` HTML elements
+- `app/views/admin/layout.php` — removed CDN fonts
+- `public/assets/css/style.css` — added `@font-face` rules, updated font variables, added watercolor nebula & astrolabe styles, updated heading overrides
+- `public/assets/css/admin.css` — updated admin headings, set login button font to mono
+- `public/assets/js/cosmos.js` — implemented color-temperature based star spawning
+
 <!-- Add a new dated section at the start of each phase following
      the same pattern. Resolved checkpoints from the prior phase
      should be marked [x] and left in place — do not delete them.
