@@ -131,7 +131,7 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
     });
 })();
 
-// Public nav: move trailing items into a hamburger menu when the row overflows
+// Public nav: slide-out drawer navigation on mobile viewports (< 900px)
 (function () {
     const shell = document.querySelector('[data-site-nav-shell]');
     if (!shell) return;
@@ -145,28 +145,14 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
 
     if (!nav || !navList || !toggle || !overflow || !overflowList || items.length === 0) return;
 
-    function syncVisibleMarkers() {
-        let firstVisibleFound = false;
-        items.forEach(item => {
-            item.classList.remove('is-first-visible');
-            if (item.classList.contains('is-overflow')) {
-                return;
-            }
-            if (!firstVisibleFound) {
-                item.classList.add('is-first-visible');
-                firstVisibleFound = true;
-            }
-        });
-    }
+    // Remove the hidden attribute so CSS can control visibility responsively
+    toggle.removeAttribute('hidden');
 
-    function closeMenu(force = false) {
+    function closeMenu() {
         toggle.setAttribute('aria-expanded', 'false');
         toggle.setAttribute('aria-label', 'Open navigation menu');
         toggle.classList.remove('is-open');
         overflow.hidden = true;
-        if (force) {
-            overflowList.innerHTML = '';
-        }
     }
 
     function buildOverflowItem(sourceLink) {
@@ -184,74 +170,15 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
         return li;
     }
 
-    function visibleItems() {
-        return items.filter(item => !item.classList.contains('is-overflow'));
-    }
-
-    function inlineWidth() {
-        syncVisibleMarkers();
-        return visibleItems().reduce((sum, item) => sum + item.getBoundingClientRect().width, 0);
-    }
-
-    function shellGap() {
-        const styles = window.getComputedStyle(shell);
-        const gap = styles.columnGap || styles.gap || '0';
-        return parseFloat(gap) || 0;
-    }
-
-    function redistribute() {
-        items.forEach(item => item.classList.remove('is-overflow'));
-        overflowList.innerHTML = '';
-        nav.style.maxWidth = '';
-        closeMenu(true);
-        toggle.hidden = true;
-        syncVisibleMarkers();
-
-        const naturalWidth = inlineWidth();
-        const availableWidth = shell.getBoundingClientRect().width;
-        if (naturalWidth <= availableWidth + 1) {
-            toggle.hidden = true;
-            syncVisibleMarkers();
-            return;
+    // Populate the mobile overflow drawer menu once with all items
+    items.forEach(item => {
+        const link = item.querySelector('a');
+        if (link) {
+            overflowList.appendChild(buildOverflowItem(link));
         }
-
-        toggle.hidden = false;
-        const toggleWidth = toggle.getBoundingClientRect().width;
-        const capacity = Math.max(0, shell.getBoundingClientRect().width - toggleWidth - shellGap());
-        let guardedLoops = items.length;
-
-        for (let index = items.length - 1; index >= 0 && inlineWidth() > capacity + 1; index -= 1) {
-            items[index].classList.add('is-overflow');
-            guardedLoops -= 1;
-            if (guardedLoops < 0) {
-                break;
-            }
-        }
-
-        const overflowedItems = items.filter(item => item.classList.contains('is-overflow'));
-        if (overflowedItems.length === 0) {
-            closeMenu(true);
-            toggle.hidden = true;
-            syncVisibleMarkers();
-            return;
-        }
-
-        overflowedItems.forEach(item => {
-            const link = item.querySelector('a');
-            if (link) {
-                overflowList.appendChild(buildOverflowItem(link));
-            }
-        });
-
-        syncVisibleMarkers();
-    }
+    });
 
     toggle.addEventListener('click', () => {
-        if (overflowList.children.length === 0) {
-            closeMenu(true);
-            toggle.hidden = true;
-            return;
-        }
         const isOpen = toggle.getAttribute('aria-expanded') === 'true';
         toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         toggle.setAttribute('aria-label', isOpen ? 'Open navigation menu' : 'Close navigation menu');
@@ -271,20 +198,6 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
             toggle.focus();
         }
     });
-
-    window.addEventListener('resize', redistribute);
-    window.addEventListener('orientationchange', redistribute);
-
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(redistribute).catch(() => {});
-    }
-
-    if (typeof ResizeObserver !== 'undefined') {
-        const resizeObserver = new ResizeObserver(() => redistribute());
-        resizeObserver.observe(shell);
-    }
-
-    redistribute();
 })();
 
 // Work description: read more / read less toggle

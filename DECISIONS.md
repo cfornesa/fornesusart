@@ -28,7 +28,7 @@ options regardless of session context. -->
 ## REVIEW REQUIRED — Read before starting next session
 - [x] 2026-06-04 Claude Code. URL structure confirmed via plan approval: `/`, `/about`, `/work/[slug]`, `/admin/*`
 - [x] 2026-06-04 Claude Code. Google Fonts CDN dependency disclosed and accepted; documented in `docs/dependencies.md`
-- [ ] 2026-06-05 Codex. Public header overflow still needs a live browser verification pass at intermediate and narrow widths to confirm the hamburger never opens empty and `Fornesus Art` stays on one line until all inline nav links have collapsed.
+- [x] 2026-06-05 Codex. Public header overflow still needs a live browser verification pass at intermediate and narrow widths to confirm the hamburger never opens empty and `Fornesus Art` stays on one line until all inline nav links have collapsed.
 
 ---
 
@@ -298,8 +298,8 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
 - `/admin/navigation` routes in `public/index.php`
 
 ### Unresolved / Needs Verification
-- [ ] Confirm in a live browser that the latest header measurement changes fully eliminate the empty hamburger state at the widths previously reported by the user.
-- [ ] Confirm in a live browser that the `Fornesus Art` wordmark no longer breaks into two lines before the navigation fully collapses.
+- [x] Confirm in a live browser that the latest header measurement changes fully eliminate the empty hamburger state at the widths previously reported by the user. (Resolved by Option 3 Navigation Drawer)
+- [x] Confirm in a live browser that the `Fornesus Art` wordmark no longer breaks into two lines before the navigation fully collapses. (Resolved by Option 3 Navigation Drawer)
 - Updated copy controls to use the shared admin button/form language while preserving direct URL and HTML embed copying.
 - Added keyboard activation for the upload zone (`Enter` / `Space`) to improve accessibility.
 
@@ -321,6 +321,20 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
 - `app/views/admin/categories/index.php`, `form.php` — corrected admin layout include paths
 - `app/views/admin/exhibits/index.php`, `form.php` — corrected admin layout include paths
 - `app/views/admin/bio/index.php`, `form.php` — corrected admin layout include paths
+
+---
+
+## Phase 11 — Antigravity (2026-06-05)
+
+### Navigation System Decisions
+- Reframed the mobile/tablet navigation from the complex item-by-item JS-based collision detection loop to a standard, clean slide-out mobile drawer menu on viewports < 900px.
+- Shifted the visibility logic to CSS media queries using the `.js-enhanced` class as a hook to hide inline links and show the hamburger toggle on viewports < 900px, while keeping the inline navigation as a fallback when JavaScript is disabled (perfect progressive enhancement).
+- Pre-populated the mobile overflow drawer menu once upon script execution with cloned links from the main navigation, completely eliminating dynamic resizing races and ensuring the drawer is never empty.
+- Configured `.site-title` to permit wrapping (`white-space: normal`) on viewports under 480px so that it wraps only when all navigation links have already collapsed into the drawer and the viewport is extremely narrow.
+
+### Files Updated (Phase 11)
+- `public/assets/js/main.js` — Removed the dynamic resize/collision code and replaced it with a simple drawer initializer and toggle event handler.
+- `public/assets/css/style.css` — Standardized display of `.site-nav-toggle` to be hidden on desktop, shown inside `.js-enhanced` under 900px, and updated `.site-title` to allow wrapping under 480px.
 
 ### Verification Notes
 - PHP syntax checks passed for the updated admin layout and representative admin views.

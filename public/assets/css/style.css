@@ -508,7 +508,7 @@ a   { color: inherit; text-decoration: none; }
 }
 
 .site-nav-toggle {
-    display: inline-flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 2.9rem;
@@ -1163,6 +1163,14 @@ main { flex: 1; }
         width: auto;
     }
 
+    .js-enhanced .site-nav-toggle {
+        display: inline-flex;
+    }
+
+    .js-enhanced .site-nav {
+        display: none;
+    }
+
     .gallery-page,
     .collection-page,
     .collection-detail-page,
@@ -1534,6 +1542,7 @@ main { flex: 1; }
     .site-title {
         font-size: clamp(1.6rem, 9vw, 2.35rem);
         letter-spacing: 0.03em;
+        white-space: normal;
     }
 
     .site-nav {
