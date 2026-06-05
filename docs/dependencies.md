@@ -4,7 +4,7 @@
 
 | Item | Value |
 |------|-------|
-| Purpose | Serving Cinzel Decorative, IM Fell English, Courier Prime typefaces |
+| Purpose | Serving Cinzel Decorative, Lora, Courier Prime typefaces |
 | Off-domain data | Yes — font requests include visitor IP address |
 | What breaks if unavailable | Fonts fall back to system serif/monospace; layout and aesthetic degrade but site remains functional |
 | Self-hosting alternative | Download font files and place in `public/assets/fonts/`; update `@font-face` rules in `style.css` |

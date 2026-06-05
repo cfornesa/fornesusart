@@ -12,6 +12,7 @@ if (PHP_SAPI === 'cli-server') {
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 require dirname(__DIR__) . '/app/helpers/auth.php';
+require dirname(__DIR__) . '/app/helpers/seo.php';
 require dirname(__DIR__) . '/app/models/MediaFile.php';
 require dirname(__DIR__) . '/app/helpers/upload.php';
 require dirname(__DIR__) . '/app/helpers/slugify.php';
@@ -19,9 +20,12 @@ require dirname(__DIR__) . '/app/models/Category.php';
 require dirname(__DIR__) . '/app/models/Artwork.php';
 require dirname(__DIR__) . '/app/models/Exhibit.php';
 require dirname(__DIR__) . '/app/models/BioSection.php';
+require dirname(__DIR__) . '/app/models/Page.php';
+require dirname(__DIR__) . '/app/models/PageSection.php';
 require dirname(__DIR__) . '/app/controllers/GalleryController.php';
 require dirname(__DIR__) . '/app/controllers/WorkController.php';
 require dirname(__DIR__) . '/app/controllers/AboutController.php';
+require dirname(__DIR__) . '/app/controllers/PageController.php';
 require dirname(__DIR__) . '/app/controllers/CategoriesController.php';
 require dirname(__DIR__) . '/app/controllers/ExhibitController.php';
 require dirname(__DIR__) . '/app/controllers/AdminController.php';
@@ -46,8 +50,10 @@ $routes = [
     ['GET',  '/categories',                    [CategoriesController::class, 'index']],
     ['GET',  '/category/([a-z0-9-]+)',         [CategoriesController::class, 'show']],
     ['GET',  '/exhibit/([a-z0-9-]+)',          [ExhibitController::class,    'show']],
-    ['GET',  '/about',                         [AboutController::class,      'index']],
-    ['POST', '/about',                         [AboutController::class,      'contact']],
+    ['GET',  '/about',                         [PageController::class,       'legacyAbout']],
+    ['GET',  '/contact',                       [PageController::class,       'contactPage']],
+    ['POST', '/about',                         [PageController::class,       'contact']],
+    ['POST', '/contact',                       [PageController::class,       'contact']],
     ['GET',  '/work/([a-z0-9-]+)',             [WorkController::class,       'show']],
 
     // Admin auth
@@ -84,14 +90,21 @@ $routes = [
     ['POST', '/admin/exhibits/([0-9]+)/delete',        [AdminController::class, 'exhibitDelete']],
     ['POST', '/admin/exhibits/reorder',                [AdminController::class, 'exhibitReorder']],
 
-    // Admin bio
-    ['GET',  '/admin/bio',                             [AdminController::class, 'bioIndex']],
-    ['GET',  '/admin/bio/create',                      [AdminController::class, 'bioCreate']],
-    ['POST', '/admin/bio/create',                      [AdminController::class, 'bioStore']],
-    ['GET',  '/admin/bio/([0-9]+)/edit',               [AdminController::class, 'bioEdit']],
-    ['POST', '/admin/bio/([0-9]+)/edit',               [AdminController::class, 'bioUpdate']],
-    ['POST', '/admin/bio/([0-9]+)/delete',             [AdminController::class, 'bioDelete']],
-    ['POST', '/admin/bio/reorder',                     [AdminController::class, 'bioReorder']],
+    // Admin pages
+    ['GET',  '/admin/bio',                             [AdminController::class, 'pagesLegacyRedirect']],
+    ['GET',  '/admin/pages',                           [AdminController::class, 'pagesIndex']],
+    ['GET',  '/admin/pages/create',                    [AdminController::class, 'pageCreate']],
+    ['POST', '/admin/pages/create',                    [AdminController::class, 'pageStore']],
+    ['GET',  '/admin/pages/([0-9]+)/edit',             [AdminController::class, 'pageEdit']],
+    ['POST', '/admin/pages/([0-9]+)/edit',             [AdminController::class, 'pageUpdate']],
+    ['POST', '/admin/pages/([0-9]+)/delete',           [AdminController::class, 'pageDelete']],
+    ['POST', '/admin/pages/reorder',                   [AdminController::class, 'pageReorder']],
+    ['GET',  '/admin/pages/([0-9]+)/sections/create',  [AdminController::class, 'pageSectionCreate']],
+    ['POST', '/admin/pages/([0-9]+)/sections/create',  [AdminController::class, 'pageSectionStore']],
+    ['GET',  '/admin/pages/sections/([0-9]+)/edit',    [AdminController::class, 'pageSectionEdit']],
+    ['POST', '/admin/pages/sections/([0-9]+)/edit',    [AdminController::class, 'pageSectionUpdate']],
+    ['POST', '/admin/pages/sections/([0-9]+)/delete',  [AdminController::class, 'pageSectionDelete']],
+    ['POST', '/admin/pages/([0-9]+)/sections/reorder', [AdminController::class, 'pageSectionReorder']],
 
     // Admin messages
     ['GET',  '/admin/messages',                        [AdminController::class, 'messagesIndex']],
@@ -108,6 +121,8 @@ $routes = [
     ['POST', '/admin/trash/purge',                     [AdminController::class, 'trashPurge']],
     ['POST', '/admin/trash/empty',                     [AdminController::class, 'trashEmpty']],
 ];
+
+$routes[] = ['GET', '/([a-z0-9-]+)', [PageController::class, 'show']];
 
 foreach ($routes as [$routeMethod, $pattern, $handler]) {
     if ($method !== $routeMethod) {

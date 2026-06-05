@@ -246,83 +246,192 @@ class AdminController
         exit;
     }
 
-    // ── Bio ───────────────────────────────────────────────────────────────
+    // ── Pages ─────────────────────────────────────────────────────────────
 
-    public static function bioIndex(): void
+    public static function pagesLegacyRedirect(): void
     {
         admin_check();
-        $sections = BioSection::all();
-        require dirname(__DIR__) . '/views/admin/bio/index.php';
-    }
-
-    public static function bioCreate(): void
-    {
-        admin_check();
-        $section = null;
-        $error   = null;
-        require dirname(__DIR__) . '/views/admin/bio/form.php';
-    }
-
-    public static function bioStore(): void
-    {
-        admin_check();
-        $heading = trim($_POST['heading'] ?? '');
-        $content = trim($_POST['content'] ?? '');
-        if (!$content) {
-            $section = null;
-            $error   = 'Content is required.';
-            require dirname(__DIR__) . '/views/admin/bio/form.php';
-            return;
-        }
-        BioSection::create($heading, $content);
-        header('Location: /admin/bio');
+        header('Location: /admin/pages', true, 302);
         exit;
     }
 
-    public static function bioEdit(string $id): void
+    public static function pagesIndex(): void
     {
         admin_check();
-        $section = BioSection::find((int) $id);
-        if (!$section) {
-            header('Location: /admin/bio');
+        $pages = Page::all();
+        require dirname(__DIR__) . '/views/admin/pages/index.php';
+    }
+
+    public static function pageCreate(): void
+    {
+        admin_check();
+        $page = null;
+        $pageError = null;
+        require dirname(__DIR__) . '/views/admin/pages/form.php';
+    }
+
+    public static function pageStore(): void
+    {
+        admin_check();
+
+        try {
+            $data = self::resolvePageData(null);
+            $pageId = Page::create($data);
+            header('Location: /admin/pages/' . $pageId . '/edit');
+        } catch (Throwable $e) {
+            $page = null;
+            $pageError = $e->getMessage();
+            require dirname(__DIR__) . '/views/admin/pages/form.php';
+        }
+        exit;
+    }
+
+    public static function pageEdit(string $id): void
+    {
+        admin_check();
+        $page = Page::find((int) $id);
+        if (!$page) {
+            header('Location: /admin/pages');
             exit;
         }
-        $error = null;
-        require dirname(__DIR__) . '/views/admin/bio/form.php';
+
+        $sections = PageSection::allForPage((int) $id);
+        $pageError = null;
+        require dirname(__DIR__) . '/views/admin/pages/form.php';
     }
 
-    public static function bioUpdate(string $id): void
+    public static function pageUpdate(string $id): void
     {
         admin_check();
+        $page = Page::find((int) $id);
+        if (!$page) {
+            header('Location: /admin/pages');
+            exit;
+        }
+
+        try {
+            $data = self::resolvePageData((int) $id);
+            Page::update((int) $id, $data);
+            header('Location: /admin/pages/' . (int) $id . '/edit?saved=1');
+        } catch (Throwable $e) {
+            $page = array_merge($page, $_POST);
+            $sections = PageSection::allForPage((int) $id);
+            $pageError = $e->getMessage();
+            require dirname(__DIR__) . '/views/admin/pages/form.php';
+        }
+        exit;
+    }
+
+    public static function pageDelete(string $id): void
+    {
+        admin_check();
+        Page::delete((int) $id);
+        header('Location: /admin/pages');
+        exit;
+    }
+
+    public static function pageReorder(): void
+    {
+        admin_check();
+        $ids = array_filter(array_map('intval', explode(',', $_POST['ids'] ?? '')));
+        Page::reorder($ids);
+        header('Content-Type: application/json');
+        echo '{"ok":true}';
+        exit;
+    }
+
+    public static function pageSectionCreate(string $pageId): void
+    {
+        admin_check();
+        $page = Page::find((int) $pageId);
+        if (!$page) {
+            header('Location: /admin/pages');
+            exit;
+        }
+
+        $section = null;
+        $sectionError = null;
+        require dirname(__DIR__) . '/views/admin/pages/section-form.php';
+    }
+
+    public static function pageSectionStore(string $pageId): void
+    {
+        admin_check();
+        $page = Page::find((int) $pageId);
+        if (!$page) {
+            header('Location: /admin/pages');
+            exit;
+        }
+
         $heading = trim($_POST['heading'] ?? '');
         $content = trim($_POST['content'] ?? '');
-        if (!$content) {
-            $section = BioSection::find((int) $id);
-            $error   = 'Content is required.';
-            require dirname(__DIR__) . '/views/admin/bio/form.php';
+        if ($content === '') {
+            $section = null;
+            $sectionError = 'Content is required.';
+            require dirname(__DIR__) . '/views/admin/pages/section-form.php';
             return;
         }
-        BioSection::update((int) $id, $heading, $content, 0);
-        header('Location: /admin/bio');
+
+        PageSection::create((int) $pageId, $heading, $content);
+        header('Location: /admin/pages/' . (int) $pageId . '/edit');
         exit;
     }
 
-    public static function bioDelete(string $id): void
+    public static function pageSectionEdit(string $sectionId): void
     {
         admin_check();
-        BioSection::delete((int) $id);
-        header('Location: /admin/bio');
-        exit;
-    }
-
-    public static function bioReorder(): void
-    {
-        admin_check();
-        $ids  = array_filter(array_map('intval', explode(',', $_POST['ids'] ?? '')));
-        $stmt = db()->prepare('UPDATE bio_sections SET sort_order = ? WHERE id = ?');
-        foreach (array_values($ids) as $i => $id) {
-            $stmt->execute([$i, $id]);
+        $section = PageSection::find((int) $sectionId);
+        if (!$section) {
+            header('Location: /admin/pages');
+            exit;
         }
+        $page = Page::find((int) $section['page_id']);
+        $sectionError = null;
+        require dirname(__DIR__) . '/views/admin/pages/section-form.php';
+    }
+
+    public static function pageSectionUpdate(string $sectionId): void
+    {
+        admin_check();
+        $section = PageSection::find((int) $sectionId);
+        if (!$section) {
+            header('Location: /admin/pages');
+            exit;
+        }
+
+        $page = Page::find((int) $section['page_id']);
+        $heading = trim($_POST['heading'] ?? '');
+        $content = trim($_POST['content'] ?? '');
+        if ($content === '') {
+            $sectionError = 'Content is required.';
+            require dirname(__DIR__) . '/views/admin/pages/section-form.php';
+            return;
+        }
+
+        PageSection::update((int) $sectionId, $heading, $content);
+        header('Location: /admin/pages/' . (int) $section['page_id'] . '/edit');
+        exit;
+    }
+
+    public static function pageSectionDelete(string $sectionId): void
+    {
+        admin_check();
+        $section = PageSection::find((int) $sectionId);
+        if ($section) {
+            PageSection::delete((int) $sectionId);
+            header('Location: /admin/pages/' . (int) $section['page_id'] . '/edit');
+            exit;
+        }
+
+        header('Location: /admin/pages');
+        exit;
+    }
+
+    public static function pageSectionReorder(string $pageId): void
+    {
+        admin_check();
+        $ids = array_filter(array_map('intval', explode(',', $_POST['ids'] ?? '')));
+        PageSection::reorder((int) $pageId, $ids);
         header('Content-Type: application/json');
         echo '{"ok":true}';
         exit;
@@ -444,6 +553,47 @@ class AdminController
             $value = null;
         }
         return [$type, $value];
+    }
+
+    private static function resolvePageData(?int $existingId): array
+    {
+        $title = trim($_POST['title'] ?? '');
+        if ($title === '') {
+            throw new InvalidArgumentException('Title is required.');
+        }
+
+        $slugInput = trim($_POST['slug'] ?? '');
+        $slug = Page::validateSlug($slugInput !== '' ? $slugInput : $title, $existingId ?? 0);
+        $template = $_POST['template'] ?? 'standard';
+        if (!in_array($template, ['standard', 'contact'], true)) {
+            throw new InvalidArgumentException('Invalid page template.');
+        }
+        if ($template === 'contact' && $slug !== 'contact') {
+            throw new InvalidArgumentException('The contact template must use the slug "contact".');
+        }
+        if ($template !== 'contact' && $slug === 'contact') {
+            throw new InvalidArgumentException('The slug "contact" is reserved for the contact page template.');
+        }
+
+        $status = $_POST['status'] ?? 'published';
+        if (!in_array($status, ['published', 'draft'], true)) {
+            throw new InvalidArgumentException('Invalid page status.');
+        }
+
+        return [
+            'title'            => $title,
+            'slug'             => $slug,
+            'status'           => $status,
+            'template'         => $template,
+            'nav_label'        => trim($_POST['nav_label'] ?? ''),
+            'show_in_nav'      => !empty($_POST['show_in_nav']) ? 1 : 0,
+            'meta_title'       => trim($_POST['meta_title'] ?? ''),
+            'meta_description' => trim($_POST['meta_description'] ?? ''),
+            'og_title'         => trim($_POST['og_title'] ?? ''),
+            'og_description'   => trim($_POST['og_description'] ?? ''),
+            'og_image'         => trim($_POST['og_image'] ?? ''),
+            'sort_order'       => (int) ($_POST['sort_order'] ?? ($existingId ? (Page::find($existingId)['sort_order'] ?? 0) : 0)),
+        ];
     }
 
     // ── Exhibits ──────────────────────────────────────────────────────────

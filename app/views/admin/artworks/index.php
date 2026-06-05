@@ -3,7 +3,7 @@ $pageTitle = 'Works — Fornesus Art Admin';
 ob_start();
 ?>
 <div class="admin-section">
-    <span id="reorder-status" class="reorder-status"></span>
+    <span id="reorder-status" class="reorder-status" aria-live="polite"></span>
     <div class="admin-section-head">
         <h1 class="admin-heading">Works</h1>
         <a href="/admin/artworks/create" class="admin-btn">+ Add Work</a>

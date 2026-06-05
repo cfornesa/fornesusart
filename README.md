@@ -44,6 +44,7 @@ The router script argument is required — without it, PHP's built-in server won
      2. `migrate_phase4_blob.sql` — adds `data` and `mime_type` columns to `media_files`
      3. Run `php -d memory_limit=256M migrate_images_to_blob.php` to move existing files to the database
      4. `migrate_phase4_cleanup.sql` — drops the legacy `path` and `subfolder` columns (run last, after verifying the script output)
+     5. `migrate_phase6_pages.sql` — creates the reusable page system, seeds `Bio` and `Contact`, and migrates legacy bio sections
 
 5. Point your web server's `DocumentRoot` to the `public/` directory. If your server is configured at the project root instead, the root `.htaccess` will redirect traffic into `public/` automatically.
 
@@ -82,7 +83,7 @@ fornesusart/
 │   ├── controllers/
 │   │   ├── GalleryController.php  # / — gallery with exhibits strip + works
 │   │   ├── WorkController.php     # /work/[slug]
-│   │   ├── AboutController.php    # /about + contact form
+│   │   ├── PageController.php     # Managed public pages, /contact form, /about redirect
 │   │   ├── CategoriesController.php  # /categories and /category/[slug]
 │   │   ├── ExhibitController.php  # /exhibit/[slug]
 │   │   ├── ImageController.php    # /image/[id] — serves blobs from DB
@@ -92,12 +93,13 @@ fornesusart/
 │   │   ├── Category.php
 │   │   ├── Exhibit.php
 │   │   ├── MediaFile.php          # BLOB storage, getData(), create(blob, mime)
-│   │   └── BioSection.php
+│   │   ├── Page.php               # Page identity + metadata
+│   │   └── PageSection.php        # Ordered sections within a page
 │   ├── views/
 │   │   ├── layout.php             # Shared header and footer
 │   │   ├── gallery.php            # /
 │   │   ├── work.php               # /work/[slug]
-│   │   ├── about.php              # /about
+│   │   ├── page.php               # /bio, /contact, /dreams, etc.
 │   │   ├── categories.php         # /categories
 │   │   ├── category.php           # /category/[slug]
 │   │   ├── exhibit.php            # /exhibit/[slug]
@@ -118,11 +120,13 @@ fornesusart/
 │   │       ├── exhibits/
 │   │       │   ├── index.php
 │   │       │   └── form.php       # Create + edit with artwork assignment
-│   │       └── bio/
+│   │       └── pages/
 │   │           ├── index.php
-│   │           └── form.php       # Create + edit (same view)
+│   │           ├── form.php
+│   │           └── section-form.php
 │   └── helpers/
 │       ├── auth.php               # Admin session gate
+│       ├── seo.php                # Metadata, canonical URLs, excerpt helpers
 │       ├── upload.php             # MIME-validated blob upload, returns /image/{id}
 │       └── slugify.php            # Title-to-slug utility
 ├── docs/
@@ -131,6 +135,7 @@ fornesusart/
 ├── migrate_phase2.sql             # Phase 2 migration
 ├── migrate_phase4_blob.sql        # Phase 4 migration — adds blob columns
 ├── migrate_phase4_cleanup.sql     # Phase 4 cleanup — drops legacy path/subfolder columns
+├── migrate_phase6_pages.sql       # Phase 6 migration — pages + page_sections + bio migration
 ├── migrate_images_to_blob.php     # One-time data migration CLI script
 ├── env.example                    # Environment variable template
 └── .env                           # Your local config — never committed
@@ -147,7 +152,10 @@ fornesusart/
 | `/category/[slug]` | Individual category with artworks |
 | `/exhibit/[slug]` | Individual exhibit with artworks |
 | `/work/[slug]` | Individual artwork |
-| `/about` | Bio + contact form |
+| `/about` | Legacy redirect to `/bio` |
+| `/bio` | Managed biography page |
+| `/contact` | Managed contact page with editable intro sections + contact form |
+| `/{page-slug}` | Managed custom page such as `/dreams` |
 | `/image/[id]` | Serves an image blob from the database |
 
 ### Admin
@@ -158,7 +166,7 @@ fornesusart/
 | `/admin/artworks` | Manage artworks |
 | `/admin/categories` | Manage categories |
 | `/admin/exhibits` | Manage exhibits + artwork assignment |
-| `/admin/bio` | Manage bio sections |
+| `/admin/pages` | Manage public pages, metadata, and sections |
 | `/admin/messages` | View contact form submissions |
 | `/admin/media` | Media library — grid-based asset manager with upload zone, details panel, and copy URL/embed |
 | `/admin/trash` | Recycle bin for soft-deleted content |

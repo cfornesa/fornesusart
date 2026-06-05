@@ -288,6 +288,53 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
   - Media Library renders with `admin-main-wide`
   - Media asset cards render in the expected grid markup
 
+---
+
+## Phase 7 — Codex (2026-06-04)
+
+### Public Design Decisions
+- Kept the public "Celestial Archive" identity, but shifted the primary reading/content font to `Lora` for readability across the site.
+- Strengthened public accessibility basics in the shared layout and stylesheet:
+  - central metadata rendering in the public layout
+  - canonical URLs, descriptions, Open Graph, and Twitter metadata support
+  - skip link and stronger focus-visible treatment
+  - reduced-motion handling for decorative atmosphere
+- Expanded the ambient background with an additional low-opacity nebula layer in CSS while keeping the existing stars/cosmos treatment lightweight.
+
+### Pages System Decisions
+- Replaced the one-off `bio_sections` concept with a reusable Pages system:
+  - `pages` for page identity, template, nav behavior, and SEO/social metadata
+  - `page_sections` for ordered sections within each page
+- Split the old `/about` concept into:
+  - `/bio` — managed standard page
+  - `/contact` — managed page with editable intro sections plus the fixed contact form
+- Added legacy compatibility by redirecting `GET /about` to `/bio` and accepting `POST /about` through the contact submission handler.
+- Reserved `/contact` for the contact-template page so the built-in form remains coherent with its public route.
+
+### Admin Content Decisions
+- Replaced the admin “Bio” entry point with “Pages” in the shared admin navigation.
+- Added a Pages portal in admin for:
+  - page creation and editing
+  - SEO/social metadata management
+  - ordered section management per page
+  - page deletion and page ordering
+- Kept admin visuals broadly intact while extending the current CRUD pattern rather than redesigning the admin area.
+
+### Files Updated (Phase 7)
+- `public/index.php` — page routes, `/about` redirect, `/contact` POST handler, new model/helper/controller requires
+- `app/controllers/PageController.php` — managed page rendering, contact form handling, `/about` redirect
+- `app/controllers/AdminController.php` — Pages CRUD and page-section CRUD/reorder
+- `app/models/Page.php`, `PageSection.php` — page identity/navigation and section ordering
+- `app/views/layout.php` — centralized metadata tags, skip link, managed-page nav
+- `app/views/page.php` — shared managed page template with optional contact section
+- `app/views/gallery.php`, `work.php`, `categories.php`, `category.php`, `exhibit.php`, `404.php` — explicit metadata variables and public layout cleanup
+- `app/views/admin/pages/index.php`, `form.php`, `section-form.php` — admin Pages interface
+- `public/assets/css/style.css` — `Lora` reading system, nebula layer, accessibility/responsive improvements
+- `public/assets/js/cosmos.js` — reduced-motion-aware lighter atmosphere behavior
+- `public/assets/js/main.js` — page slug auto-fill support
+- `schema.sql`, `migrate_phase6_pages.sql` — page system schema and migration
+- `docs/dependencies.md`, `README.md` — updated font dependency and architecture docs
+
 
 <!-- Add a new dated section at the start of each phase following
      the same pattern. Resolved checkpoints from the prior phase

@@ -3,7 +3,7 @@ $pageTitle = 'Exhibits — Fornesus Art Admin';
 ob_start();
 ?>
 <div class="admin-section">
-    <span id="reorder-status" class="reorder-status"></span>
+    <span id="reorder-status" class="reorder-status" aria-live="polite"></span>
     <div class="admin-section-head">
         <h1 class="admin-heading">Exhibits</h1>
         <a href="/admin/exhibits/create" class="admin-btn">+ New Exhibit</a>

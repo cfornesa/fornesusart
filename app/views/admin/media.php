@@ -13,17 +13,17 @@ ob_start();
     </div>
 
     <?php if (isset($_GET['uploaded'])): ?>
-        <p class="admin-notice">Asset uploaded successfully.</p>
+        <p class="admin-notice" role="status">Asset uploaded successfully.</p>
     <?php endif ?>
     <?php if (isset($_GET['error'])): ?>
-        <p class="admin-error"><?= htmlspecialchars($_GET['error']) ?></p>
+        <p class="admin-error" role="alert"><?= htmlspecialchars($_GET['error']) ?></p>
     <?php endif ?>
 
     <section class="media-upload-panel">
         <form method="POST" action="/admin/media/upload" enctype="multipart/form-data" class="media-upload-form">
             <input type="file" name="media_file" id="media-upload-input" accept="image/*">
         </form>
-        <div class="media-upload-zone" id="media-upload-zone" tabindex="0" role="button" aria-controls="media-upload-input">
+        <div class="media-upload-zone" id="media-upload-zone" tabindex="0" role="button" aria-label="Upload or drop an image" aria-controls="media-upload-input">
             <span class="media-upload-text">Upload or drop an image</span>
             <span class="media-upload-hint">JPEG, PNG, GIF, WEBP, and AVIF files are supported.</span>
         </div>
@@ -46,7 +46,8 @@ ob_start();
                              class="media-card"
                              data-id="<?= (int) $f['id'] ?>"
                              data-mime="<?= htmlspecialchars($f['mime_type'] ?? '') ?>"
-                             data-date="<?= date('Y-m-d', strtotime($f['created_at'])) ?>">
+                             data-date="<?= date('Y-m-d', strtotime($f['created_at'])) ?>"
+                             aria-label="Select asset <?= (int) $f['id'] ?>, <?= htmlspecialchars($f['mime_type'] ?? 'unknown type') ?>">
                             <span class="media-card-thumb">
                                 <img src="/image/<?= (int) $f['id'] ?>"
                                      alt=""
@@ -73,7 +74,7 @@ ob_start();
                 <img id="details-preview-img" class="is-hidden" src="" alt="">
             </div>
 
-            <div class="media-details-placeholder" id="details-placeholder">
+            <div class="media-details-placeholder" id="details-placeholder" aria-live="polite">
                 Select an asset to view details.
             </div>
 
@@ -118,6 +119,8 @@ ob_start();
                     </form>
                 </div>
             </div>
+
+            <p class="admin-hint" id="media-copy-status" aria-live="polite"></p>
         </aside>
     </div>
 </div>
@@ -135,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const destroyForm = document.getElementById('action-destroy-form');
     const placeholderText = document.getElementById('details-placeholder');
     const contentArea = document.getElementById('details-content-area');
+    const copyStatus = document.getElementById('media-copy-status');
 
     function selectCard(card) {
         cards.forEach(item => item.classList.remove('active'));
@@ -146,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const imgUrl = `/image/${id}`;
 
         previewImg.src = imgUrl;
+        previewImg.alt = `Preview of asset ${id}`;
         previewImg.classList.remove('is-hidden');
 
         metaId.textContent = id;
@@ -203,8 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             btn.textContent = 'Copied!';
+            copyStatus.textContent = `${targetId === 'input-url' ? 'Direct URL' : 'HTML embed code'} copied.`;
             setTimeout(() => {
                 btn.textContent = originalText;
+                copyStatus.textContent = '';
             }, 1200);
         });
     });

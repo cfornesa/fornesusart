@@ -7,15 +7,25 @@
 
     // Skip entirely in admin panel
     if (document.body.classList.contains('admin-body')) return;
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var saveData = !!(navigator.connection && navigator.connection.saveData);
+    var lowMemory = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4;
+    var lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4;
+    var lowPowerMode = prefersReducedMotion || saveData || lowMemory || lowCpu;
+
+    if (lowPowerMode) {
+        document.documentElement.classList.add('low-power');
+    }
 
     // ─── Pulsating DOM stars (reduced count, slower) ──────────────────────
 
     (function buildStars() {
         var container = document.createElement('div');
         container.id  = 'cosmos-stars';
+        container.setAttribute('aria-hidden', 'true');
         document.body.appendChild(container);
 
-        var count = 40;
+        var count = lowPowerMode ? 14 : 28;
 
         for (var i = 0; i < count; i++) {
             var isAmber  = Math.random() < 0.35;
@@ -28,7 +38,7 @@
             star.className = 'cosmos-star cosmos-star--' + (isAmber ? 'amber' : 'cold');
 
             // Slow durations: 10–24 s — gentle shimmer, not a flicker
-            var duration = 10 + Math.random() * 14;
+            var duration = lowPowerMode ? (14 + Math.random() * 16) : (10 + Math.random() * 14);
             var delay    = -(Math.random() * 15);
 
             star.style.cssText =
@@ -48,6 +58,7 @@
 
     (function staggerGlows() {
         var cards = document.querySelectorAll('.artwork-card, .collection-card');
+        if (!cards.length || lowPowerMode) return;
         var rules = [];
         cards.forEach(function (card, i) {
             var delay = ((i * 1.3) % 11).toFixed(1) + 's';
@@ -63,10 +74,13 @@
         }
     })();
 
+    if (lowPowerMode) return;
+
     // ─── Shooting stars (canvas — loop only runs when a star is active) ───
 
     var canvas = document.createElement('canvas');
     canvas.id  = 'cosmos-canvas';
+    canvas.setAttribute('aria-hidden', 'true');
     canvas.style.cssText =
         'position:fixed;inset:0;pointer-events:none;z-index:9999;' +
         'width:100vw;height:100vh;';

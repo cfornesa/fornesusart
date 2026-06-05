@@ -15,7 +15,7 @@
     --nebula-violet: rgba(80, 30, 130, 1);
 
     --font-display: 'Cinzel Decorative', 'Times New Roman', serif;
-    --font-body:    'IM Fell English', Georgia, serif;
+    --font-body:    'Lora', Georgia, serif;
     --font-mono:    'Courier Prime', 'Courier New', monospace;
 
     --max-w: 1280px;
@@ -54,6 +54,17 @@
 @keyframes artwork-hover-fade {
     0%, 100% { opacity: 0.75; }
     50%       { opacity: 1;    }
+}
+
+@keyframes nebula-drift {
+    0%, 100% {
+        opacity: 0.38;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        opacity: 0.52;
+        transform: translate3d(1.5%, -1%, 0) scale(1.04);
+    }
 }
 
 /* ─── Reset ───────────────────────────────────────────────────────────────── */
@@ -169,8 +180,48 @@ body::before {
         );
 }
 
+body::after {
+    content: '';
+    position: fixed;
+    inset: -10%;
+    pointer-events: none;
+    z-index: -1;
+    background-image:
+        radial-gradient(ellipse 38% 28% at 20% 24%, rgba(50, 90, 170, 0.10) 0%, transparent 72%),
+        radial-gradient(ellipse 34% 26% at 78% 20%, rgba(110, 55, 155, 0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 42% 30% at 65% 72%, rgba(40, 85, 170, 0.07) 0%, transparent 74%);
+    filter: blur(18px);
+    opacity: 0.45;
+    animation: nebula-drift 38s ease-in-out infinite;
+}
+
 img { display: block; max-width: 100%; height: auto; }
 a   { color: inherit; text-decoration: none; }
+
+.skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -3rem;
+    padding: 0.7rem 1rem;
+    background: rgba(0, 0, 0, 0.96);
+    border: 1px solid var(--amber-border);
+    color: var(--amber);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    z-index: 300;
+    transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+    top: 1rem;
+}
+
+:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+}
 
 /* ─── Cosmos JS layer ─────────────────────────────────────────────────────── */
 
@@ -248,16 +299,25 @@ a   { color: inherit; text-decoration: none; }
 }
 .site-title:hover { opacity: 0.75; }
 
+.low-power .site-title {
+    animation: none;
+    filter: none;
+}
+
 .site-nav {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    font-family: var(--font-display);
+    gap: 0.7rem;
+    font-family: var(--font-mono);
     font-size: 0.72rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
 }
 .site-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.15rem 0;
     opacity: 0.55;
     transition: opacity 0.2s, color 0.2s;
 }
@@ -304,6 +364,7 @@ main { flex: 1; }
 .gallery-section-header {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 1.2rem;
     margin-bottom: 2.4rem;
     padding-bottom: 0.8rem;
@@ -454,25 +515,35 @@ main { flex: 1; }
     opacity: 1;
 }
 
+.low-power .artwork-card::after,
+.low-power .collection-card::after {
+    animation: none;
+    opacity: 0.18;
+}
+
+.low-power .artwork-glow,
+.low-power .work-piece-glow {
+    opacity: 0.28;
+}
+
 .artwork-meta {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    flex-wrap: wrap;
     margin-top: 0.7rem;
     gap: 0.6rem;
+    max-width: 28ch;
 }
 
 .artwork-title {
     font-family: var(--font-body);
-    font-size: 0.9rem;
-    font-style: italic;
-    letter-spacing: 0.02em;
-    opacity: 0.85;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+    line-height: 1.55;
+    opacity: 0.96;
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 }
 
 .artwork-year {
@@ -595,6 +666,7 @@ main { flex: 1; }
 .work-meta-line {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.6rem;
     font-family: var(--font-mono);
     font-size: 0.75rem;
@@ -608,25 +680,41 @@ main { flex: 1; }
 
 .work-description {
     font-family: var(--font-body);
-    font-size: 1rem;
-    line-height: 1.8;
-    opacity: 0.8;
+    font-size: 1.05rem;
+    line-height: 1.95;
+    opacity: 0.92;
     max-width: 56ch;
+    text-wrap: pretty;
 }
 
 /* ─── About / Bio Page ────────────────────────────────────────────────────── */
 
-.about-page {
+.about-page,
+.page-shell {
     padding: 4rem var(--gutter) 6rem;
     max-width: 720px;
     margin: 0 auto;
 }
 
-.about-content { display: flex; flex-direction: column; gap: 3rem; }
+.about-content,
+.page-content { display: flex; flex-direction: column; gap: 3rem; }
 
-.bio-section {}
+.page-header { margin-bottom: 2rem; }
 
-.bio-heading {
+.page-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--amber);
+    text-wrap: balance;
+}
+
+.bio-section,
+.page-section {}
+
+.bio-heading,
+.page-section-heading {
     font-family: var(--font-display);
     font-size: clamp(0.85rem, 1.8vw, 1.1rem);
     font-weight: 400;
@@ -639,14 +727,18 @@ main { flex: 1; }
     font-variant-caps: small-caps;
 }
 
-.bio-text {
+.bio-text,
+.page-section-body {
     font-family: var(--font-body);
-    font-size: 1rem;
-    line-height: 1.85;
-    opacity: 0.85;
+    font-size: 1.05rem;
+    line-height: 1.95;
+    opacity: 0.95;
+    max-width: 62ch;
+    text-wrap: pretty;
 }
 
-.bio-placeholder { font-style: italic; opacity: 0.35; }
+.bio-placeholder,
+.page-placeholder { font-style: italic; opacity: 0.42; }
 
 /* Contact section — visually continuous with bio */
 .contact-section {
@@ -674,6 +766,7 @@ main { flex: 1; }
     flex-direction: column;
     gap: 1.4rem;
     margin-top: 1.5rem;
+    max-width: 40rem;
 }
 
 .field-row {
@@ -692,22 +785,23 @@ main { flex: 1; }
 
 .contact-form input,
 .contact-form textarea {
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--amber-border);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--amber-border);
     color: var(--parchment);
     font-family: var(--font-body);
     font-size: 1rem;
-    padding: 0.5rem 0;
+    padding: 0.75rem 0.85rem;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
     width: 100%;
     resize: vertical;
+    min-height: 3rem;
 }
 
 .contact-form input:focus,
 .contact-form textarea:focus {
-    border-bottom-color: var(--amber);
+    border-color: var(--amber);
+    background-color: rgba(255, 255, 255, 0.04);
 }
 
 .contact-submit {
@@ -716,7 +810,7 @@ main { flex: 1; }
     border: 1px solid var(--amber-border);
     color: var(--amber);
     cursor: pointer;
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-size: 0.72rem;
     letter-spacing: 0.2em;
     padding: 0.7rem 2rem;
@@ -770,6 +864,72 @@ main { flex: 1; }
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 2.4rem;
+}
+
+@media (max-width: 900px) {
+    .site-header {
+        align-items: flex-start;
+        gap: 1rem;
+        padding-top: 1.75rem;
+        padding-bottom: 1.1rem;
+    }
+
+    .site-nav {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        row-gap: 0.35rem;
+    }
+
+    .gallery-page,
+    .collection-page,
+    .collection-detail-page,
+    .about-page,
+    .page-shell {
+        padding-top: 3rem;
+        padding-bottom: 5rem;
+    }
+
+    .gallery-section {
+        margin-bottom: 4rem;
+    }
+
+    .gallery-section-header {
+        gap: 0.8rem 1rem;
+        margin-bottom: 1.8rem;
+    }
+
+    .section-rule {
+        max-width: none;
+        min-width: 5rem;
+    }
+
+    .work-page {
+        padding-top: 2.5rem;
+        padding-bottom: 5rem;
+    }
+
+    .work-detail {
+        gap: 2.25rem;
+    }
+
+    .work-back {
+        margin-bottom: 2.25rem;
+    }
+
+    .page-content,
+    .about-content {
+        gap: 2.4rem;
+    }
+
+    .collection-grid {
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 1.8rem;
+    }
+
+    .exhibits-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.2rem;
+    }
 }
 
 .collection-card {
@@ -827,13 +987,14 @@ main { flex: 1; }
 }
 .collection-card-name {
     font-family: var(--font-body);
-    font-style: italic;
-    font-size: 0.9rem;
-    opacity: 0.85;
+    font-size: 1rem;
+    line-height: 1.5;
+    opacity: 0.94;
 }
 .collection-card-desc {
     font-family: var(--font-mono);
     font-size: 0.68rem;
+    line-height: 1.6;
     letter-spacing: 0.06em;
     opacity: 0.45;
 }
@@ -847,7 +1008,87 @@ main { flex: 1; }
     margin: 2rem 0 3rem;
 }
 @media (max-width: 640px) {
+    .site-header {
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .site-nav {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        row-gap: 0.4rem;
+    }
+
+    .nav-sep {
+        display: none;
+    }
+
+    .gallery-page,
+    .collection-page,
+    .collection-detail-page,
+    .work-page,
+    .about-page,
+    .page-shell {
+        padding-top: 2.25rem;
+        padding-bottom: 4rem;
+    }
+
+    .gallery-section-header {
+        align-items: center;
+        margin-bottom: 1.35rem;
+    }
+
+    .section-rule {
+        display: none;
+    }
+
+    .category-name,
+    .collection-title,
+    .collection-detail-title,
+    .page-title,
+    .work-title {
+        letter-spacing: 0.04em;
+    }
+
+    .work-detail {
+        gap: 1.8rem;
+    }
+
+    .work-description,
+    .page-section-body,
+    .collection-detail-desc {
+        font-size: 1rem;
+        line-height: 1.8;
+    }
+
+    .contact-form {
+        gap: 1rem;
+    }
+
+    .exhibits-grid,
+    .collection-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .collection-card-meta,
+    .artwork-meta {
+        gap: 0.25rem 0.5rem;
+    }
+
     .collection-detail-header { grid-template-columns: 1fr; }
+
+    .collection-detail-thumb {
+        width: min(100%, 18rem);
+    }
+
+    .work-piece-wrap::before {
+        width: 104%;
+    }
+
+    .work-piece-wrap::after {
+        width: 118%;
+    }
 }
 
 .collection-detail-thumb {
@@ -870,10 +1111,15 @@ main { flex: 1; }
 }
 .collection-detail-desc {
     font-family: var(--font-body);
-    font-size: 1rem;
-    line-height: 1.8;
-    opacity: 0.8;
+    font-size: 1.05rem;
+    line-height: 1.9;
+    opacity: 0.9;
     max-width: 56ch;
+    text-wrap: pretty;
+}
+
+.collection-artworks {
+    margin-top: 3rem;
 }
 
 /* category link on work detail */
@@ -888,7 +1134,7 @@ main { flex: 1; }
 
 /* See more button */
 .see-more-btn {
-    display: block;
+    display: none;
     margin: 2.5rem auto 0;
     background: transparent;
     border: 1px solid var(--amber-border);
@@ -906,9 +1152,45 @@ main { flex: 1; }
     border-color: var(--amber);
 }
 
-.gallery-work-overflow { display: none; }
+.js-enhanced .see-more-btn {
+    display: block;
+}
+
+.js-enhanced .gallery-work-overflow {
+    display: none;
+}
 
 /* Read more / less buttons */
+.desc-short {
+    display: none;
+}
+
+.desc-read-more,
+.desc-read-less {
+    display: none;
+}
+
+.js-enhanced .desc-short {
+    display: inline;
+}
+
+.js-enhanced .desc-full {
+    display: none;
+}
+
+.js-enhanced .work-description.is-expanded .desc-short {
+    display: none;
+}
+
+.js-enhanced .work-description.is-expanded .desc-full {
+    display: inline;
+}
+
+.js-enhanced .desc-read-more,
+.js-enhanced .desc-read-less {
+    display: inline;
+}
+
 .desc-read-more,
 .desc-read-less {
     background: none;
@@ -962,3 +1244,74 @@ main { flex: 1; }
     transition: opacity 0.2s;
 }
 .error-back:hover { opacity: 1; }
+
+@media (max-width: 640px) {
+    .contact-submit {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .site-title {
+        font-size: 1.2rem;
+        letter-spacing: 0.09em;
+    }
+
+    .site-nav {
+        font-size: 0.68rem;
+        letter-spacing: 0.14em;
+    }
+
+    .gallery-page,
+    .collection-page,
+    .collection-detail-page,
+    .work-page,
+    .about-page,
+    .page-shell {
+        padding-top: 2rem;
+    }
+
+    .exhibits-grid,
+    .collection-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .artwork-year,
+    .collection-card-desc {
+        font-size: 0.64rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    body::after {
+        animation: none;
+        opacity: 0.32;
+    }
+}
+
+@media (prefers-contrast: more) {
+    body::after,
+    #cosmos-stars,
+    #cosmos-canvas {
+        opacity: 0.18;
+    }
+
+    .artwork-card::after,
+    .collection-card::after,
+    .work-piece-glow {
+        opacity: 0.12;
+    }
+}

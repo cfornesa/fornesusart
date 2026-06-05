@@ -6,7 +6,7 @@
     <title><?= htmlspecialchars($pageTitle ?? 'Admin — Fornesus Art') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Courier+Prime&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Lora:ital,wght@0,400..700;1,400..700&family=Courier+Prime&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css?v=<?= filemtime(dirname(__DIR__, 3) . '/public/assets/css/style.css') ?>">
     <link rel="stylesheet" href="/assets/css/admin.css?v=<?= filemtime(dirname(__DIR__, 3) . '/public/assets/css/admin.css') ?>">
 
@@ -23,7 +23,7 @@ $adminNavItems = [
     '/admin/exhibits' => 'Exhibits',
     '/admin/media' => 'Media',
     '/admin/trash' => 'Trash',
-    '/admin/bio' => 'Bio',
+    '/admin/pages' => 'Pages',
     '/admin/messages' => 'Messages',
 ];
 ?>

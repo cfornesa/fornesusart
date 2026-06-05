@@ -1,7 +1,7 @@
 /* Admin panel styles — minimal, functional, stays within the aesthetic */
 
 .admin-body {
-    font-family: 'IM Fell English', Georgia, serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
 }
 
@@ -532,6 +532,14 @@ tr.drag-over td { border-top: 2px solid var(--amber); }
     display: flex;
     flex-direction: column;
     gap: 1rem;
+}
+
+.login-form label {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.55;
 }
 
 .login-form input[type="password"] {

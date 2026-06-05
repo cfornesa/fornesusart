@@ -80,14 +80,15 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
     if (!btn) return;
     btn.addEventListener('click', () => {
         document.querySelectorAll('.gallery-work-overflow').forEach(el => {
-            el.style.display = '';
+            el.classList.remove('gallery-work-overflow');
         });
+        btn.setAttribute('aria-expanded', 'true');
         btn.remove();
     });
 })();
 
 // Generic slug auto-fill: any input[id$="-name"] → sibling input[id$="-slug"]
-['cat', 'exhibit'].forEach(prefix => {
+['cat', 'exhibit', 'page'].forEach(prefix => {
     const nameInput = document.getElementById(prefix + '-name');
     const slugInput = document.getElementById(prefix + '-slug');
     if (!nameInput || !slugInput) return;
@@ -128,15 +129,24 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
 document.querySelectorAll('.desc-read-more').forEach(btn => {
     btn.addEventListener('click', () => {
         const wrap = btn.closest('.work-description');
-        wrap.querySelector('.desc-short').hidden = true;
-        wrap.querySelector('.desc-full').hidden  = false;
+        wrap.classList.add('is-expanded');
+        btn.setAttribute('aria-expanded', 'true');
+        const lessBtn = wrap.querySelector('.desc-read-less');
+        if (lessBtn) {
+            lessBtn.focus();
+        }
     });
 });
 document.querySelectorAll('.desc-read-less').forEach(btn => {
     btn.addEventListener('click', () => {
         const wrap = btn.closest('.work-description');
-        wrap.querySelector('.desc-short').hidden = false;
-        wrap.querySelector('.desc-full').hidden  = true;
+        wrap.classList.remove('is-expanded');
+        btn.setAttribute('aria-expanded', 'false');
+        const moreBtn = wrap.querySelector('.desc-read-more');
+        if (moreBtn) {
+            moreBtn.setAttribute('aria-expanded', 'false');
+            moreBtn.focus();
+        }
     });
 });
 

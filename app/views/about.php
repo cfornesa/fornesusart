@@ -1,36 +1,46 @@
 <?php
 $pageTitle  = 'About — Fornesus Art';
 $activePage = 'about';
+$metaTitle = 'About — Fornesus Art';
+$metaDescription = seo_excerpt($sections[0]['content'] ?? '', 170)
+    ?: 'Learn more about Fornesus Art and get in touch.';
+$ogTitle = $metaTitle;
+$ogDescription = $metaDescription;
+$canonicalUrl = seo_absolute_url('/about');
 
 ob_start();
 ?>
 <div class="about-page">
+    <header class="page-header">
+        <h1 class="page-title">About</h1>
+    </header>
+
     <div class="about-content">
         <?php foreach ($sections as $section): ?>
-            <div class="bio-section">
+            <section class="bio-section"<?= $section['heading'] ? ' aria-labelledby="about-section-' . (int) $section['id'] . '"' : '' ?>>
                 <?php if ($section['heading']): ?>
-                    <h2 class="bio-heading"><?= htmlspecialchars($section['heading']) ?></h2>
+                    <h2 class="bio-heading" id="about-section-<?= (int) $section['id'] ?>"><?= htmlspecialchars($section['heading']) ?></h2>
                 <?php endif ?>
                 <div class="bio-text">
                     <?= nl2br(htmlspecialchars($section['content'])) ?>
                 </div>
-            </div>
+            </section>
         <?php endforeach ?>
 
         <?php if (empty($sections)): ?>
-            <div class="bio-section">
+            <section class="bio-section">
                 <div class="bio-text bio-placeholder">No biography has been written yet.</div>
-            </div>
+            </section>
         <?php endif ?>
 
-        <div class="contact-section">
-            <h2 class="bio-heading">Correspondence</h2>
+        <section class="contact-section" aria-labelledby="about-contact-heading">
+            <h2 class="bio-heading" id="about-contact-heading">Correspondence</h2>
 
             <?php if ($contactSent): ?>
-                <p class="contact-sent">Your message has been received.</p>
+                <p class="contact-sent" role="status">Your message has been received.</p>
             <?php else: ?>
                 <?php if ($contactError ?? null): ?>
-                    <p class="contact-error"><?= htmlspecialchars($contactError) ?></p>
+                    <p class="contact-error" role="alert"><?= htmlspecialchars($contactError) ?></p>
                 <?php endif ?>
                 <form class="contact-form" method="POST" action="/about">
                     <div class="field-row">
@@ -41,6 +51,9 @@ ob_start();
                             name="name"
                             value="<?= htmlspecialchars($_POST['name'] ?? '') ?>"
                             autocomplete="name"
+                            autocapitalize="words"
+                            spellcheck="false"
+                            required
                         >
                     </div>
                     <div class="field-row">
@@ -51,6 +64,10 @@ ob_start();
                             name="email"
                             value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
                             autocomplete="email"
+                            inputmode="email"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            required
                         >
                     </div>
                     <div class="field-row">
@@ -59,12 +76,16 @@ ob_start();
                             id="contact-message"
                             name="message"
                             rows="6"
+                            autocapitalize="sentences"
+                            spellcheck="true"
+                            enterkeyhint="send"
+                            required
                         ><?= htmlspecialchars($_POST['message'] ?? '') ?></textarea>
                     </div>
                     <button type="submit" class="contact-submit">Send</button>
                 </form>
             <?php endif ?>
-        </div>
+        </section>
     </div>
 </div>
 
