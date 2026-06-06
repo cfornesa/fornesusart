@@ -63,6 +63,10 @@
 
     --max-w: 1280px;
     --gutter: clamp(1.5rem, 5vw, 4rem);
+    --embed-stage-w: min(calc(100vw - (var(--gutter) * 2)), var(--max-w));
+    --embed-stage-h: clamp(34rem, 88vh, 78rem);
+    --embed-stage-h-tablet: clamp(26rem, 72vh, 52rem);
+    --embed-stage-h-mobile: clamp(20rem, 62vh, 34rem);
 }
 
 /* ─── Animations ──────────────────────────────────────────────────────────── */
@@ -881,11 +885,14 @@ main { flex: 1; }
     position: relative;
     z-index: 1;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    min-height: var(--embed-stage-h);
+    height: var(--embed-stage-h);
 }
 .work-embed iframe {
     width: 100%;
-    height: 100%;
+    min-height: 100% !important;
+    height: 100% !important;
+    aspect-ratio: auto !important;
     border: none;
     display: block;
 }
@@ -967,6 +974,22 @@ main { flex: 1; }
     opacity: 0.92;
     max-width: 56ch;
     text-wrap: pretty;
+}
+
+.bio-text iframe,
+.page-section-body iframe,
+.work-description iframe,
+.collection-detail-desc iframe,
+.rich-embed-frame {
+    width: var(--embed-stage-w) !important;
+    max-width: none !important;
+    min-height: var(--embed-stage-h) !important;
+    height: var(--embed-stage-h) !important;
+    aspect-ratio: auto !important;
+    display: block;
+    border: none;
+    margin: 1.5rem 50% !important;
+    transform: translateX(-50%);
 }
 
 /* ─── About / Bio Page ────────────────────────────────────────────────────── */
@@ -1402,6 +1425,41 @@ main { flex: 1; }
     opacity: 0.9;
     max-width: 56ch;
     text-wrap: pretty;
+}
+
+@media (max-width: 900px) {
+    .work-embed,
+    .work-embed iframe,
+    .bio-text iframe,
+    .page-section-body iframe,
+    .work-description iframe,
+    .collection-detail-desc iframe,
+    .rich-embed-frame {
+        min-height: var(--embed-stage-h-tablet) !important;
+        height: var(--embed-stage-h-tablet) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .work-embed,
+    .work-embed iframe,
+    .bio-text iframe,
+    .page-section-body iframe,
+    .work-description iframe,
+    .collection-detail-desc iframe,
+    .rich-embed-frame {
+        min-height: var(--embed-stage-h-mobile) !important;
+        height: var(--embed-stage-h-mobile) !important;
+    }
+
+    .bio-text iframe,
+    .page-section-body iframe,
+    .work-description iframe,
+    .collection-detail-desc iframe,
+    .rich-embed-frame {
+        margin-top: 1.2rem !important;
+        margin-bottom: 1.2rem !important;
+    }
 }
 
 .collection-artworks {

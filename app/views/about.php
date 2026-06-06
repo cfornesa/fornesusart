@@ -22,7 +22,7 @@ ob_start();
                     <h2 class="bio-heading" id="about-section-<?= (int) $section['id'] ?>"><?= htmlspecialchars($section['heading']) ?></h2>
                 <?php endif ?>
                 <div class="bio-text">
-                    <?= nl2br(htmlspecialchars($section['content'])) ?>
+                    <?= $section['content'] ?>
                 </div>
             </section>
         <?php endforeach ?>

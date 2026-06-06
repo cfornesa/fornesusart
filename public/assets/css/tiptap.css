@@ -127,17 +127,67 @@
 .tiptap-editor img { max-width: 100%; border-radius: 2px; display: block; }
 
 /* iframe placeholder inside editor */
-.tiptap-editor div[data-iframe-src] {
+.tiptap-iframe-preview {
     background: rgba(200,155,60,0.06);
     border: 1px dashed var(--amber-border);
     border-radius: 2px;
     padding: 0.6rem 1rem;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
+    display: grid;
+    gap: 0.18rem;
     color: var(--amber);
-    opacity: 0.7;
     cursor: default;
     user-select: none;
+}
+.tiptap-iframe-preview span,
+.tiptap-iframe-preview strong {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+.tiptap-iframe-preview span:last-child {
+    opacity: 0.62;
+    word-break: break-word;
+}
+.tiptap-iframe-preview strong {
+    color: var(--parchment);
+    font-weight: 400;
+}
+
+.tiptap-embed-notice {
+    border-top: 1px solid rgba(200,74,74,0.22);
+    background: rgba(200,74,74,0.08);
+    padding: 0.8rem 1rem 0.95rem;
+    display: grid;
+    gap: 0.55rem;
+}
+.tiptap-embed-notice-text {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    line-height: 1.55;
+    color: #e6c0c0;
+}
+.tiptap-embed-draft {
+    width: 100%;
+    min-height: 6rem;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(200,74,74,0.35);
+    color: var(--parchment);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    line-height: 1.45;
+    padding: 0.7rem 0.8rem;
+    resize: vertical;
+    box-sizing: border-box;
+}
+.tiptap-embed-draft:focus {
+    outline: none;
+    border-color: rgba(200,74,74,0.65);
+}
+.tiptap-embed-notice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 /* ─── Media Picker Modal ───────────────────────────────────────────────────── */

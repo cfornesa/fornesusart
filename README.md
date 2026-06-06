@@ -270,6 +270,8 @@ Content fields (page section content, artwork / category / exhibit descriptions)
 
 **Toolbar**: headings, font family, font size, bold, italic, underline, strikethrough, text colour, highlight, horizontal rule, link (with title), insert image from library, insert iframe embed, HTML source toggle.
 
+**Iframe embeds**: the rich-text iframe button accepts either a bare iframe URL or full `<iframe ...></iframe>` markup. Saved TipTap embeds are emitted with a site-owned `rich-embed-frame` class so public templates can stage them as immersive media instead of prose-width blocks. If pasted embed code is malformed, the editor keeps it in a recoverable inline draft notice and offers to open HTML source mode with that draft instead of silently discarding it.
+
 **Image editing**: a pencil icon appears at the bottom-right corner of each image on hover. Clicking it opens an inline popover for alt text editing.
 
 **Link editing**: a small pencil icon appears to the right of any link the cursor is inside. Clicking it opens a floating popover with URL and title fields.

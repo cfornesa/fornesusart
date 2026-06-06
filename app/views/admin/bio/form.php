@@ -22,7 +22,7 @@ ob_start();
         </div>
         <div class="form-row">
             <label>Content *</label>
-            <textarea name="content" rows="10" required><?= htmlspecialchars($section['content'] ?? '') ?></textarea>
+            <textarea name="content" rows="10" required data-tiptap><?= htmlspecialchars($section['content'] ?? '') ?></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="admin-btn"><?= $isEdit ? 'Save Changes' : 'Add Section' ?></button>

@@ -30,6 +30,160 @@ const FontSize = Extension.create({
   },
 })
 
+const IFRAME_DEFAULTS = {
+  width: '100%',
+  height: '960',
+  loading: 'lazy',
+  allow: 'fullscreen',
+  style: 'width:100%;display:block;',
+  frameborder: '0',
+  allowfullscreen: true,
+}
+
+const IFRAME_ATTRIBUTE_NAMES = [
+  'src',
+  'title',
+  'width',
+  'height',
+  'loading',
+  'allow',
+  'sandbox',
+  'style',
+  'frameborder',
+]
+
+function buildIframeAttrs(overrides = {}) {
+  const attrs = { ...IFRAME_DEFAULTS, ...overrides }
+  attrs.src = typeof attrs.src === 'string' ? attrs.src.trim() : ''
+  attrs.title = typeof attrs.title === 'string' ? attrs.title.trim() : null
+  attrs.width = typeof attrs.width === 'string' && attrs.width.trim() ? attrs.width.trim() : IFRAME_DEFAULTS.width
+  attrs.height = typeof attrs.height === 'string' && attrs.height.trim() ? attrs.height.trim() : IFRAME_DEFAULTS.height
+  attrs.loading = typeof attrs.loading === 'string' && attrs.loading.trim() ? attrs.loading.trim() : IFRAME_DEFAULTS.loading
+  attrs.allow = typeof attrs.allow === 'string' && attrs.allow.trim() ? attrs.allow.trim() : IFRAME_DEFAULTS.allow
+  attrs.sandbox = typeof attrs.sandbox === 'string' && attrs.sandbox.trim() ? attrs.sandbox.trim() : null
+  attrs.style = typeof attrs.style === 'string' && attrs.style.trim() ? attrs.style.trim() : IFRAME_DEFAULTS.style
+  attrs.frameborder = typeof attrs.frameborder === 'string' && attrs.frameborder.trim() ? attrs.frameborder.trim() : IFRAME_DEFAULTS.frameborder
+  attrs.allowfullscreen = attrs.allowfullscreen !== false
+  return attrs
+}
+
+function serializeIframeAttrs(attrs) {
+  const htmlAttrs = {}
+  const richEmbedClass = 'rich-embed-frame'
+
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (key === 'allowfullscreen') {
+      if (value) htmlAttrs.allowfullscreen = ''
+      return
+    }
+
+    if (value == null) return
+
+    const stringValue = String(value).trim()
+    if (stringValue !== '') {
+      htmlAttrs[key] = stringValue
+    }
+  })
+
+  const existingClass = typeof htmlAttrs.class === 'string' ? htmlAttrs.class.trim() : ''
+  htmlAttrs.class = existingClass
+    ? Array.from(new Set(`${existingClass} ${richEmbedClass}`.split(/\s+/))).join(' ')
+    : richEmbedClass
+
+  return htmlAttrs
+}
+
+function looksLikeIframeMarkup(raw) {
+  return /<iframe\b/i.test(raw) || /<\/iframe>/i.test(raw)
+}
+
+function isIframeSourceUrl(raw) {
+  if (!raw) return false
+  if (raw.startsWith('/')) return true
+
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function parseIframeMarkup(raw) {
+  const doc = new DOMParser().parseFromString(raw, 'text/html')
+  const iframe = doc.body.querySelector('iframe')
+
+  if (!iframe) {
+    return {
+      ok: false,
+      message: 'This embed draft does not contain a readable `<iframe>` element yet.',
+    }
+  }
+
+  const src = iframe.getAttribute('src')?.trim() || ''
+  if (!src) {
+    return {
+      ok: false,
+      message: 'This iframe draft is missing a usable `src` attribute. You can correct it below and try again.',
+    }
+  }
+
+  const attrs = {}
+  IFRAME_ATTRIBUTE_NAMES.forEach(name => {
+    const value = iframe.getAttribute(name)
+    if (value != null) attrs[name] = value
+  })
+  attrs.allowfullscreen = iframe.hasAttribute('allowfullscreen')
+
+  return {
+    ok: true,
+    attrs: buildIframeAttrs(attrs),
+  }
+}
+
+function normalizeIframeInput(raw) {
+  const value = typeof raw === 'string' ? raw.trim() : ''
+  if (!value) {
+    return {
+      ok: false,
+      message: 'Enter an iframe URL or the full `<iframe …></iframe>` embed HTML.',
+    }
+  }
+
+  if (looksLikeIframeMarkup(value)) {
+    return parseIframeMarkup(value)
+  }
+
+  if (!isIframeSourceUrl(value)) {
+    return {
+      ok: false,
+      message: 'That draft is not a valid iframe URL yet. Use `https://…`, `http://…`, `/path`, or complete iframe HTML.',
+    }
+  }
+
+  return {
+    ok: true,
+    attrs: buildIframeAttrs({ src: value }),
+  }
+}
+
+function extractIframePasteDraft(html, text) {
+  const htmlValue = typeof html === 'string' ? html.trim() : ''
+  const textValue = typeof text === 'string' ? text.trim() : ''
+
+  if (looksLikeIframeMarkup(htmlValue)) {
+    const doc = new DOMParser().parseFromString(htmlValue, 'text/html')
+    const iframe = doc.body.querySelector('iframe')
+    return iframe?.outerHTML || htmlValue
+  }
+
+  if (looksLikeIframeMarkup(textValue)) {
+    return textValue
+  }
+
+  return null
+}
+
 // ─── Custom: Iframe block ─────────────────────────────────────────────────────
 
 const IframeNode = Node.create({
@@ -37,17 +191,43 @@ const IframeNode = Node.create({
   group: 'block',
   atom: true,
   addAttributes() {
-    return { src: { default: null }, width: { default: '100%' }, height: { default: '450' } }
+    return {
+      src: { default: null },
+      title: { default: null },
+      width: { default: IFRAME_DEFAULTS.width },
+      height: { default: IFRAME_DEFAULTS.height },
+      loading: { default: IFRAME_DEFAULTS.loading },
+      allow: { default: IFRAME_DEFAULTS.allow },
+      sandbox: { default: null },
+      style: { default: IFRAME_DEFAULTS.style },
+      frameborder: { default: IFRAME_DEFAULTS.frameborder },
+      allowfullscreen: {
+        default: true,
+        parseHTML: element => element.hasAttribute('allowfullscreen'),
+      },
+    }
   },
   parseHTML() { return [{ tag: 'iframe[src]' }] },
   renderHTML({ HTMLAttributes }) {
-    return ['iframe', { ...HTMLAttributes, allowfullscreen: '', frameborder: '0', style: 'max-width:100%;display:block' }]
+    return ['iframe', serializeIframeAttrs(buildIframeAttrs(HTMLAttributes))]
   },
   addNodeView() {
     return ({ node }) => {
       const wrap = document.createElement('div')
+      const label = document.createElement('span')
+      const meta = document.createElement('strong')
+      const details = document.createElement('span')
+
+      wrap.className = 'tiptap-iframe-preview'
       wrap.dataset.iframeSrc = node.attrs.src
-      wrap.textContent = `⬛ iFrame: ${node.attrs.src}`
+      label.textContent = '⬛ iFrame'
+      meta.textContent = node.attrs.title || node.attrs.src || 'Embed draft'
+      details.textContent = node.attrs.title ? node.attrs.src : 'Rich-text embed'
+
+      wrap.appendChild(label)
+      wrap.appendChild(meta)
+      wrap.appendChild(details)
+
       return { dom: wrap }
     }
   },
@@ -276,6 +456,37 @@ function initTiptap(textarea) {
   sourceTa.className = 'tiptap-source'
   sourceTa.setAttribute('aria-label', 'HTML source')
 
+  const iframeNotice = document.createElement('div')
+  iframeNotice.className = 'tiptap-embed-notice'
+  iframeNotice.hidden = true
+  iframeNotice.setAttribute('aria-live', 'polite')
+
+  const iframeNoticeText = document.createElement('p')
+  iframeNoticeText.className = 'tiptap-embed-notice-text'
+
+  const iframeDraft = document.createElement('textarea')
+  iframeDraft.className = 'tiptap-embed-draft'
+  iframeDraft.setAttribute('aria-label', 'Recoverable iframe draft')
+
+  const iframeNoticeActions = document.createElement('div')
+  iframeNoticeActions.className = 'tiptap-embed-notice-actions'
+
+  const iframeNoticeApply = document.createElement('button')
+  iframeNoticeApply.type = 'button'
+  iframeNoticeApply.className = 'admin-btn admin-btn-sm'
+  iframeNoticeApply.textContent = 'Open HTML Source With Draft'
+
+  const iframeNoticeClear = document.createElement('button')
+  iframeNoticeClear.type = 'button'
+  iframeNoticeClear.className = 'admin-btn admin-btn-ghost admin-btn-sm'
+  iframeNoticeClear.textContent = 'Clear Notice'
+
+  iframeNoticeActions.appendChild(iframeNoticeApply)
+  iframeNoticeActions.appendChild(iframeNoticeClear)
+  iframeNotice.appendChild(iframeNoticeText)
+  iframeNotice.appendChild(iframeDraft)
+  iframeNotice.appendChild(iframeNoticeActions)
+
   // ── Floating link trigger + popover (appended to body, position:fixed) ──────
   const linkTrigger = document.createElement('button')
   linkTrigger.type = 'button'
@@ -377,6 +588,25 @@ function initTiptap(textarea) {
   })
 
   // ── Editor ───────────────────────────────────────────────────────────────
+  let sourceMode = false
+  let pendingIframeDraft = ''
+  let sizeDebounce = null
+
+  function showIframeNotice(message, draft = '') {
+    pendingIframeDraft = draft.trim()
+    iframeNoticeText.textContent = message
+    iframeDraft.value = pendingIframeDraft
+    iframeDraft.hidden = pendingIframeDraft === ''
+    iframeNotice.hidden = false
+  }
+
+  function hideIframeNotice() {
+    pendingIframeDraft = ''
+    iframeDraft.value = ''
+    iframeDraft.hidden = true
+    iframeNotice.hidden = true
+  }
+
   const editor = new Editor({
     element: editorDiv,
     extensions: [
@@ -392,14 +622,61 @@ function initTiptap(textarea) {
       IframeNode,
     ],
     content: textarea.value || '',
+    editorProps: {
+      handlePaste(view, event) {
+        if (sourceMode) return false
+
+        const draft = extractIframePasteDraft(
+          event.clipboardData?.getData('text/html') || '',
+          event.clipboardData?.getData('text/plain') || ''
+        )
+
+        if (!draft) return false
+
+        const normalized = normalizeIframeInput(draft)
+        event.preventDefault()
+
+        if (normalized.ok) {
+          hideIframeNotice()
+          editor.chain().focus().setIframe(normalized.attrs).run()
+          return true
+        }
+
+        showIframeNotice(normalized.message, draft)
+        return true
+      },
+    },
   })
+
+  function setSourceMode(nextMode, options = {}) {
+    const { preserveSource = false } = options
+    if (sourceMode === nextMode) return
+
+    sourceMode = nextMode
+
+    if (sourceMode) {
+      if (!preserveSource) sourceTa.value = editor.getHTML()
+      editorDiv.style.display = 'none'
+      sourceTa.classList.add('visible')
+      htmlBtn.classList.add('is-active')
+      linkTrigger.hidden = true
+      closeLinkPopover()
+      bar.querySelectorAll('.tt-btn, .tt-select, .tt-number, .tt-color').forEach(el => {
+        if (el !== htmlBtn) el.setAttribute('disabled', '')
+      })
+      return
+    }
+
+    editor.commands.setContent(sourceTa.value)
+    sourceTa.classList.remove('visible')
+    editorDiv.style.display = ''
+    htmlBtn.classList.remove('is-active')
+    bar.querySelectorAll('[disabled]').forEach(el => el.removeAttribute('disabled'))
+  }
 
   // ── Toolbar ──────────────────────────────────────────────────────────────
   const bar = document.createElement('div')
   bar.className = 'tiptap-toolbar'
-
-  let sourceMode  = false
-  let sizeDebounce = null
 
   // Headings
   const headSel = document.createElement('select')
@@ -483,33 +760,45 @@ function initTiptap(textarea) {
   // iFrame
   const iframeBtn = icon('⬛'); iframeBtn.title = 'Insert iframe embed'
   iframeBtn.addEventListener('click', () => {
-    const src = window.prompt('iFrame embed URL:'); if (!src) return
-    editor.chain().focus().setIframe({ src }).run()
+    const raw = window.prompt('Paste an iframe URL or full iframe HTML:')
+    if (!raw) return
+
+    const normalized = normalizeIframeInput(raw)
+    if (normalized.ok) {
+      hideIframeNotice()
+      editor.chain().focus().setIframe(normalized.attrs).run()
+      return
+    }
+
+    showIframeNotice(normalized.message, raw)
   })
   bar.appendChild(iframeBtn); bar.appendChild(sep())
 
   // HTML source toggle
   const htmlBtn = icon('HTML'); htmlBtn.title = 'Toggle HTML source view'
   htmlBtn.addEventListener('click', () => {
-    sourceMode = !sourceMode
-    if (sourceMode) {
-      sourceTa.value = editor.getHTML()
-      editorDiv.style.display = 'none'
-      sourceTa.classList.add('visible')
-      htmlBtn.classList.add('is-active')
-      linkTrigger.hidden = true; closeLinkPopover()
-      bar.querySelectorAll('.tt-btn, .tt-select, .tt-number, .tt-color').forEach(el => {
-        if (el !== htmlBtn) el.setAttribute('disabled', '')
-      })
-    } else {
-      editor.commands.setContent(sourceTa.value)
-      sourceTa.classList.remove('visible')
-      editorDiv.style.display = ''
-      htmlBtn.classList.remove('is-active')
-      bar.querySelectorAll('[disabled]').forEach(el => el.removeAttribute('disabled'))
-    }
+    setSourceMode(!sourceMode)
   })
   bar.appendChild(htmlBtn)
+
+  iframeNoticeApply.addEventListener('click', () => {
+    if (!pendingIframeDraft) return
+
+    if (!sourceMode) {
+      setSourceMode(true)
+    }
+
+    const separator = sourceTa.value.trim() && !sourceTa.value.endsWith('\n') ? '\n' : ''
+    sourceTa.value += `${separator}${pendingIframeDraft}`
+    sourceTa.focus()
+    sourceTa.selectionStart = sourceTa.selectionEnd = sourceTa.value.length
+    hideIframeNotice()
+  })
+
+  iframeNoticeClear.addEventListener('click', hideIframeNotice)
+  iframeDraft.addEventListener('input', () => {
+    pendingIframeDraft = iframeDraft.value
+  })
 
   // ── Toolbar sync ─────────────────────────────────────────────────────────
   function syncToolbar() {
@@ -545,6 +834,7 @@ function initTiptap(textarea) {
   wrap.appendChild(bar)
   wrap.appendChild(editorDiv)
   wrap.appendChild(sourceTa)
+  wrap.appendChild(iframeNotice)
   textarea.parentNode.insertBefore(wrap, textarea)
 
   // ── Submit sync ──────────────────────────────────────────────────────────
