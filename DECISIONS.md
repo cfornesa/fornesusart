@@ -568,8 +568,14 @@ The hamburger toggle button was non-functional on Safari on iPhone while working
 
 **JS fix** (`public/assets/js/main.js`): Added `touchend` listener on the toggle (immediately after the `click` listener). `e.preventDefault()` blocks the browser from synthesising a ghost click after touch; `toggle.click()` fires a programmatic click that the existing handler catches. On Android and desktop `touchend` also fires but `e.preventDefault()` prevents the duplicate click, so toggle behaviour is identical on all platforms. `{ passive: false }` is required to allow `preventDefault` on the touchend event.
 
+### Work Embed — Minimum Height on Narrow Viewports
+
+The "Asian Representation" embed (OpenProcessing exhibit with three sketches and a fullscreen expand button) was clipping its expand button on mobile. Root cause: `padding-bottom: 56.25%` (16:9) derives height from content width — at 390px iPhone the container was only 192px tall, and the embed platform's fullscreen button near the bottom of its gallery layout was clipped by `overflow: hidden`.
+
+Added `min-height: 400px` to `.work-embed`. When the 16:9-derived height falls below 400px (content width < ~711px), the container expands to 400px. The absolutely-positioned iframe at `height: 100%` fills the 400px minimum correctly via the containing-block height resolution. At wider viewports (>~800px), 16:9 exceeds 400px and the ratio governs unchanged. 400px is ~47% of an iPhone 13 screen height — a proportionate stage for an artwork that is the primary content.
+
 ### Files Updated (Phase 12)
-- `public/assets/css/style.css` — 16:9 thumbnail/image/embed sizing; `touch-action: manipulation` on nav toggle
+- `public/assets/css/style.css` — 16:9 thumbnail/image/embed sizing; `touch-action: manipulation` on nav toggle; `min-height: 400px` on `.work-embed`
 - `public/assets/js/main.js` — `touchend` iOS workaround for nav toggle
 
 ---
