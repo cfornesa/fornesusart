@@ -186,6 +186,12 @@ document.querySelectorAll('tbody[data-reorder-url]').forEach(tbody => {
         overflow.hidden = isOpen;
     });
 
+    // iOS Safari: backdrop-filter + sticky header drops synthesised click events
+    toggle.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        toggle.click();
+    }, { passive: false });
+
     document.addEventListener('click', event => {
         if (overflow.hidden) return;
         if (shell.contains(event.target)) return;

@@ -539,6 +539,41 @@ Images are now stored directly in the database as LONGBLOBs rather than on the f
 - `app/views/page.php`, `work.php`, `exhibit.php`, `category.php` — raw HTML output for rich text fields
 - `docs/dependencies.md` — Tiptap CDN dependency documented
 
+## Phase 12 — Claude Code (2026-06-08)
+
+### 16:9 Art Piece Containers
+
+All art piece display contexts now use a consistent 16:9 aspect-ratio box. Content scales to **fit** (no crop, no overflow). Dark background `#0a0a0a` provides letterboxing for non-widescreen art.
+
+**Thumbnail containers** — gallery grid, exhibit cards, category/collection grid:
+- `.artwork-thumb-wrap`: `aspect-ratio` changed from `4/3` → `16/9`; `object-fit` changed from `cover` → `contain`
+- `.exhibit-card .artwork-thumb-wrap`: override changed from `1/1` → `16/9`
+- `.collection-thumb-wrap`: same `4/3` → `16/9` and `cover` → `contain` changes
+
+**Work detail — image** (`.work-image`): `max-height: 80vh` replaced with `aspect-ratio: 16/9`; `object-fit: contain` unchanged.
+
+**Work detail — embed** (`.work-embed`): The earlier `height: var(--embed-stage-h)` variable system was replaced with the **padding-bottom ratio technique** (`height: 0; padding-bottom: 56.25%; overflow: hidden`). Reason: `aspect-ratio` on a container can be expanded by children with fixed intrinsic dimensions; `height: 0 + padding-bottom: %` cannot be overridden by any child — the container's height is purely CSS-driven. This resolved per-piece horizontal overflow that appeared when embed codes contained wrappers or iframes with large hardcoded `width` attributes.
+
+**Embed children** — new `.work-embed > *` rule and revised `.work-embed iframe` rule: both use `position: absolute !important; top: 0; left: 0; width: 100% !important; height: 100% !important`. The `!important` flags defeat both HTML attributes (`width="640"`) and inline styles (`style="width: 640px"`). Taking children out of flow prevents them from driving the container's size.
+
+**Responsive media query cleanup**: `.work-embed` and `.work-embed iframe` removed from the `@media (max-width: 900px)` and `@media (max-width: 640px)` height-override selector lists. Those overrides were using `!important` height values that fought the new ratio containment. The remaining selectors in those blocks (`.bio-text iframe`, `.rich-embed-frame`, etc.) are unchanged.
+
+### Hamburger Menu — iOS Safari Fix
+
+The hamburger toggle button was non-functional on Safari on iPhone while working on Android, desktop, and other browsers.
+
+**Root cause**: `.site-header` has `position: sticky` combined with `-webkit-backdrop-filter: blur(12px)`. This creates a GPU compositing layer in WebKit. A documented WebKit bug causes synthesized `click` events to be dropped or mis-routed for child elements inside such a composited sticky container. Android Chrome implements `backdrop-filter` via Blink and is unaffected.
+
+**CSS fix** (`public/assets/css/style.css`): Added `touch-action: manipulation` to `.site-nav-toggle`. This tells iOS to treat the element as a direct manipulation target — no 300ms tap delay, no double-tap-to-zoom intercept.
+
+**JS fix** (`public/assets/js/main.js`): Added `touchend` listener on the toggle (immediately after the `click` listener). `e.preventDefault()` blocks the browser from synthesising a ghost click after touch; `toggle.click()` fires a programmatic click that the existing handler catches. On Android and desktop `touchend` also fires but `e.preventDefault()` prevents the duplicate click, so toggle behaviour is identical on all platforms. `{ passive: false }` is required to allow `preventDefault` on the touchend event.
+
+### Files Updated (Phase 12)
+- `public/assets/css/style.css` — 16:9 thumbnail/image/embed sizing; `touch-action: manipulation` on nav toggle
+- `public/assets/js/main.js` — `touchend` iOS workaround for nav toggle
+
+---
+
 <!-- Add a new dated section at the start of each phase following
      the same pattern. Resolved checkpoints from the prior phase
      should be marked [x] and left in place — do not delete them.

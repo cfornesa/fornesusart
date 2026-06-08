@@ -521,6 +521,7 @@ a   { color: inherit; text-decoration: none; }
     background: rgba(200, 155, 60, 0.06);
     color: var(--parchment);
     transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+    touch-action: manipulation;
 }
 
 .site-nav-toggle:hover,
@@ -722,14 +723,14 @@ main { flex: 1; }
 .artwork-thumb-wrap {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 9;
     background: #0a0a0a;
 }
 
 .artwork-thumb-wrap img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                 filter 0.5s ease;
     filter: brightness(0.82) saturate(0.9);
@@ -874,7 +875,7 @@ main { flex: 1; }
 
 .work-image {
     width: 100%;
-    max-height: 80vh;
+    aspect-ratio: 16 / 9;
     object-fit: contain;
     display: block;
     position: relative;
@@ -885,14 +886,23 @@ main { flex: 1; }
     position: relative;
     z-index: 1;
     width: 100%;
-    min-height: var(--embed-stage-h);
-    height: var(--embed-stage-h);
+    height: 0;
+    padding-bottom: 56.25%;
+    overflow: hidden;
+}
+.work-embed > * {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
 }
 .work-embed iframe {
-    width: 100%;
-    min-height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
     height: 100% !important;
-    aspect-ratio: auto !important;
     border: none;
     display: block;
 }
@@ -1144,7 +1154,7 @@ main { flex: 1; }
 }
 
 .exhibit-card .artwork-thumb-wrap {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 16 / 9;
 }
 
 /* ─── Collection pages (categories list, category detail, exhibit detail) ── */
@@ -1255,13 +1265,13 @@ main { flex: 1; }
 .collection-thumb-wrap {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 9;
     background: #0a0a0a;
 }
 .collection-thumb-wrap img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.5s ease;
     filter: brightness(0.82) saturate(0.9);
 }
@@ -1428,8 +1438,6 @@ main { flex: 1; }
 }
 
 @media (max-width: 900px) {
-    .work-embed,
-    .work-embed iframe,
     .bio-text iframe,
     .page-section-body iframe,
     .work-description iframe,
@@ -1441,8 +1449,6 @@ main { flex: 1; }
 }
 
 @media (max-width: 640px) {
-    .work-embed,
-    .work-embed iframe,
     .bio-text iframe,
     .page-section-body iframe,
     .work-description iframe,
