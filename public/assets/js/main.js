@@ -507,6 +507,24 @@ document.querySelectorAll('.toggle-group').forEach(group => {
     nextBtn?.addEventListener('click', () => goTo(activeIndex + 1));
     dots.forEach(dot => dot.addEventListener('click', () => goTo(Number(dot.dataset.index || 0))));
 
+    // iOS Safari: synthesised click events can be dropped on absolutely-positioned controls
+    prevBtn?.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        prevBtn.click();
+    }, { passive: false });
+
+    nextBtn?.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        nextBtn.click();
+    }, { passive: false });
+
+    dots.forEach(dot => {
+        dot.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            dot.click();
+        }, { passive: false });
+    });
+
     carousel.addEventListener('keydown', event => {
         if (event.key === 'ArrowLeft') {
             event.preventDefault();
