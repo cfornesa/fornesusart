@@ -603,7 +603,302 @@ Added `min-height: 400px` to `.work-embed`. When the 16:9-derived height falls b
 
 ---
 
+## Phase 13 — Claude Code (2026-06-09)
+
+### Multi-select Categories & Exhibits on the Edit Work Form
+
+Previously an artwork could only belong to a single category (`artworks.category_id`
+FK) and could not be assigned to exhibits from its own edit form at all (exhibit
+membership was only editable from the exhibit side via `exhibit_artworks`).
+
+User requested both gaps closed and confirmed the **full many-to-many** approach
+for categories — mirroring the existing `exhibit_artworks` junction-table pattern
+rather than keeping categories single-select or adding a secondary-category field.
+
+**Schema**: new `artwork_categories` junction table (`artwork_id`, `category_id`,
+composite PK, both FKs `ON DELETE CASCADE`), added to `schema.sql` next to
+`exhibit_artworks`. `migrate_artwork_categories.sql` creates the table and
+backfills it from existing `artworks.category_id` values. Per the
+"keep legacy field during the migration release" pattern (Phase 7/9,
+`piece_type`/`piece_value`), `artworks.category_id` is **retained** (nullable,
+unused by application code) as a rollback safety net — to be dropped in a future
+cleanup migration.
+
+**Models**:
+- `Artwork.php`: `allSorted()`, `all()`, `find()`, `findBySlug()`, `trashed()` no
+  longer JOIN `categories` directly; a new private `attachCategories()` batches
+  category lookups for list queries, and `decorate()` attaches `categories` via
+  new `categoriesFor()` for single-record fetches. New `categoryIds()` and
+  `syncCategories()` (delete-then-reinsert, mirrors `Exhibit::syncArtworks`).
+  `create()`/`update()` no longer read or write `category_id`.
+  `allGroupedByCategory()` is confirmed dead code (no callers) and was left
+  untouched.
+- `Category.php`: `artworks()` now joins through `artwork_categories` instead of
+  `WHERE category_id = ?`.
+- `Exhibit.php`: `artworks()` dropped its now-pointless `LEFT JOIN categories`
+  (category data was unused by `exhibit.php`). New `exhibitIdsForArtwork()` and
+  `syncForArtwork()` (delete-then-reinsert from the artwork side, appending new
+  rows to the end of each exhibit's existing `sort_order`).
+
+**Controller** (`AdminController.php`): `artworkCreate`/`artworkEdit` now also
+load `$allExhibits`, `$assignedCategoryIds`, `$assignedExhibitIds` for the form.
+`resolveArtworkData()` drops `category_id` and adds `category_ids`/`exhibit_ids`
+arrays from `$_POST`. `artworkStore`/`artworkUpdate` call
+`Artwork::syncCategories()` and `Exhibit::syncForArtwork()` after the existing
+`ArtworkMediaItem::syncForArtwork()` call. `draftArtworkFromPost()` now derives
+`category_ids`/`exhibit_ids` from POST or, for an existing artwork, from
+`Artwork::categoryIds()` / `Exhibit::exhibitIdsForArtwork()`, so validation-error
+re-renders preserve checked boxes.
+
+**Views**:
+- `admin/artworks/form.php`: the single Category `<select>` was replaced with two
+  checkbox-list fieldsets (Categories, Exhibits), reusing the existing
+  `.exhibit-artwork-list` / `.exhibit-artwork-check` classes from the exhibit
+  edit form verbatim — no new CSS.
+- `work.php`: the single category link is now a loop over `$artwork['categories']`
+  (comma-separated, same `.work-cat-sep`/`.work-category` classes); the
+  meta-description fallback uses `categories[0]['name']` with the same generic
+  fallback string.
+- `admin/artworks/index.php`: the Category column now joins
+  `array_column($w['categories'], 'name')` with `, `, falling back to `—`.
+
+### Files Updated (Phase 13)
+- `schema.sql`, `migrate_artwork_categories.sql` (new)
+- `app/models/Artwork.php`, `app/models/Category.php`, `app/models/Exhibit.php`
+- `app/controllers/AdminController.php`
+- `app/views/admin/artworks/form.php`, `app/views/admin/artworks/index.php`,
+  `app/views/work.php`
+- `CONSTRAINTS.md` — new constraint for `artwork_categories` many-to-many
+
+---
+
+## Phase 14 — Antigravity (2026-06-09)
+
+### Database Integration, Custom Interactive Multiselect Widget & Inline Creation
+
+Applied the database migration for `artwork_categories` which was previously left unexecuted, successfully establishing the many-to-many relationship in the live database. Reframed the category and exhibit selection user interface into a custom, responsive, tag-based multiselect widget built on vanilla HTML/CSS/JS.
+
+**UI/UX Refactoring**:
+- Replaced the simple checklists for Categories and Exhibits with a custom `.multiselect-control` search and selection interface.
+- Selected items are displayed as styled dismissible tag/chip elements.
+- Typing in the input filters the dropdown options. Selecting an option marks it selected and hides/disables it from the dropdown. Removing a tag restores the option.
+- Preserved standard browser form submission compatibility by dynamically sync-managing hidden input fields (`category_ids[]` and `exhibit_ids[]`).
+- Rendered multiselect controls unconditionally, even when no categories or exhibits exist in the database, allowing users to create entries dynamically from a blank state.
+
+**Inline Creation Overlay Modal**:
+- Added support for inline creation of categories or exhibits that do not yet exist: if the user's search query does not match any current options, a `+ Create [Type] "[Name]"` option is shown at the bottom of the dropdown.
+- Selecting it or pressing Enter triggers a custom in-site modal dialog (`dialog.inline-create-dialog` with native `<dialog>` overlay support) that displays confirmation options ("Create" and "Cancel") and allows renaming the proposed item before committing.
+- On confirm, sends a POST request to new backend API endpoints (`/admin/categories/create-inline` and `/admin/exhibits/create-inline` in `AdminController.php`), returning the newly created ID and name in JSON format.
+- The Javascript dynamically creates a new dropdown option element, adds it to the list, and selects it as a tag immediately without a page reload.
+
+**Files Updated (Phase 14)**:
+- `app/views/admin/artworks/form.php` (Custom multiselect HTML, hidden inputs, and inline-create dialog markup)
+- `public/assets/css/admin.css` (Styles for multiselect UI and inline modal dialog styling)
+- `public/assets/js/main.js` (Multiselect control logic, dialog overlay event handling, inline creation AJAX requests, and dynamic option injection)
+- `app/controllers/AdminController.php` (New `categoryCreateInline` and `exhibitCreateInline` API methods)
+- `public/index.php` (New routes mapping inline category and exhibit creation endpoints)
+- `app/models/Artwork.php` (Implemented batch exhibit loading and single-item exhibit decoration)
+- `app/views/admin/artworks/index.php` (Added the Exhibit column displaying all assigned exhibits after the Category column)
+
+---
+
+## Phase 15 — Claude Code (2026-06-09)
+
+### Admin Full-Bleed Layout & Messages Management (read/flag/pin/trash)
+
+Two changes, resolved via AskUserQuestion before implementation: (1) every
+`/admin/*` page now uses the same near-100%-width layout instead of a
+1000px-capped column with a separate 1280px "wide" exception for
+Media/Navigation; (2) the Messages admin page gained read/unread, flag, and
+pin-to-favorite toggles plus soft-delete via the existing Trash flow.
+
+**Layout**:
+- `public/assets/css/admin.css`: `.admin-main` changed from
+  `max-width: 1000px` to `max-width: 100%` (full-bleed, edges aligned with
+  `.admin-header`'s existing `2rem` padding; global `box-sizing:
+  border-box` prevents overflow). The `.admin-main-wide` (1280px) rule was
+  removed — with `.admin-main` at 100% it would have made Media/Navigation
+  *narrower* than every other page.
+- `app/views/admin/media.php` and `app/views/admin/navigation.php`: removed
+  their `$mainClass = 'admin-main...'` overrides; `layout.php` already
+  defaults `$mainClass` to `admin-main`, so all admin pages converge on one
+  width.
+
+**Messages**:
+- `contact_messages` gained `is_read`, `is_flagged`, `is_pinned`,
+  `sort_order`, `deleted_at` columns
+  (`migrate_phase15_messages.sql`, `schema.sql`).
+- New `app/models/ContactMessage.php`: `all()` (active, ordered),
+  `trashed()`, `trashedCount()`, `softDelete()`/`hardDelete()`/`restore()`
+  (mirrors `Category.php`), `toggleRead()`, `toggleFlagged()`,
+  `togglePinned()`, `reorder()`.
+- Ordering: `ORDER BY is_pinned DESC, (CASE WHEN is_pinned = 1 THEN
+  sort_order ELSE 0 END) ASC, created_at DESC`. Pinning a message
+  ("favorite") sets `is_pinned = 1` and `sort_order` to one less than the
+  current minimum among pinned rows, jumping it to the top of the pinned
+  group; pinned rows can then be drag-reordered via the existing
+  `tbody[data-reorder-url]` JS (`/admin/messages/reorder`, mirrors
+  `artworkReorder`). The `CASE` means unpinned rows always stay
+  `created_at DESC`-ordered regardless of any stored `sort_order`, so
+  reordering the whole table (the generic handler's behavior) doesn't
+  freeze the live inbox order.
+- `AdminController.php`: `messagesIndex()` now uses `ContactMessage::all()`;
+  added `messageToggleRead`, `messageToggleFlag`, `messageTogglePin`,
+  `messageReorder`, `messageDelete` (soft-delete); `trashIndex`/
+  `trashRestore`/`trashPurge`/`trashEmpty` extended with a `'message'`/
+  `'messages'` case alongside artwork/category/exhibit/media.
+- `public/index.php`: new POST routes for the five message actions above.
+- `app/views/admin/messages.php`: rewritten with a drag-handle column,
+  `is-unread` row styling (bold), and per-row toggle buttons (`.msg-toggle-btn`
+  / `.msg-toggle-btn.active`) for read/unread (●/○), flag (⚑), and pin (★/☆),
+  plus a "Move to trash" form matching `artworks/index.php`'s pattern.
+- `app/views/admin/trash.php`: added a "Messages" tab to `$tabs`, a
+  `'messages' => 'message'` arm to the `$type` match, and a name+preview
+  branch for the messages tab.
+
+### Files Updated (Phase 15)
+- `public/assets/css/admin.css`
+- `app/views/admin/media.php`, `app/views/admin/navigation.php`
+- `migrate_phase15_messages.sql` (new), `schema.sql`
+- `app/models/ContactMessage.php` (new)
+- `app/controllers/AdminController.php`
+- `public/index.php`
+- `app/views/admin/messages.php`, `app/views/admin/trash.php`
+- `CONSTRAINTS.md` — new constraints for admin layout width and
+  contact_messages soft-delete/ordering
+
+### Resolved checkpoints
+- [x] `migrate_phase15_messages.sql` applied to `srv1819.hstgr.io`
+  (`u276695328_art.contact_messages`) after explicit user confirmation —
+  confirmed via `SHOW COLUMNS` that `is_read`, `is_flagged`, `is_pinned`,
+  `sort_order`, `deleted_at` are present.
+
+---
+
+## Phase 16 — Claude Code (2026-06-09)
+
+### Public Gallery Homepage — Exhibits/Works Prominence Swap
+
+User observed that on the gallery homepage, Works (large irregular grid)
+read as far more prominent than Exhibits (small uniform thumbnail row),
+even though Exhibits sit above Works — and asked for the inverse.
+
+Gallery presented per AGENTS.md Rule 2: (1) swap grid treatments between
+the two sections [chosen], (2) give Exhibits a full-width featured-hero
+band with Works left unchanged (Reframe — "prominent" need not mean "same
+grid, bigger spans"), (3) horizontal scrolling exhibits filmstrip with
+Works left unchanged (unexpected — picks up the existing-but-unused
+`.exhibits-strip` class name as a hint of an earlier filmstrip intent).
+
+**Chosen**: swap grid treatments. In `app/views/gallery.php`:
+- Exhibits now render in the irregular 12-column `.artwork-grid` with
+  `size-large/wide/medium/small` variants (same `match ($i % 7)` formula
+  Works used) and `.artwork-card` styling — Roman-numeral catalog counters,
+  hover glow/scale.
+- Works now render in the compact uniform `.exhibits-grid`
+  (`auto-fill, minmax(180px,1fr)`) with `.exhibit-card` styling — no
+  counters, no hover glow.
+- No new CSS rules were added; only the grid container class and per-item
+  card class (incl. size-class assignment) were swapped between the two
+  sections. `/category/[slug]` and `/exhibit/[slug]` detail pages have
+  their own independent `.artwork-grid` blocks (`category.php`,
+  `exhibit.php`) and are unaffected.
+- The "See More" overflow toggle (`gallery-work-overflow` /
+  `#works-see-more`, `main.js`) is class/grid-agnostic and unaffected.
+
+**Named caveat (accepted by user)**: with only one exhibit in the database
+today, it renders as a single `size-large` (span-6) card with empty grid
+space beside it on wide viewports. If this looks sparse in the browser,
+revisit the per-exhibit size-class formula (e.g. always `size-wide`/full
+span when `count($exhibits) === 1`) — not done preemptively per AGENTS.md
+Rule 4 (don't substitute judgment the user hasn't asked for).
+
+### Files Updated (Phase 16)
+- `app/views/gallery.php`
+- `CONSTRAINTS.md` — new constraint documenting this swap as intentional
+
+---
+
+## Phase 17 — Claude Code (2026-06-09)
+
+### Contact Form Spam Mitigation — reCAPTCHA v3 + Honeypot/Time-Trap
+
+User reported a lot of contact-form spam and asked for reCAPTCHA. Both
+`/contact` (`PageController`) and `/about` (`AboutController`) post to the
+same `contact_messages` table with zero prior anti-spam measures.
+
+Per AGENTS.md's mandatory "New Vendor Dependency" question (any reCAPTCHA
+choice sends visitor data to Google — off-domain, requires disclosure), a
+gallery was presented per Rule 2: (1) reCAPTCHA v2 checkbox as literally
+requested, (2) Reframe — honeypot + time-trap only, no vendor at all, (3)
+unexpected — Cloudflare Turnstile (smaller privacy footprint than Google).
+User countered with a fourth option not in the gallery: **Google reCAPTCHA
+v3** (invisible, score-based, more accessible — no checkbox/challenge UI).
+Adopted v3, with honeypot + time-trap added regardless as a free first layer
+(agreed "either way" of vendor choice). Scope question: both `/contact` and
+`/about` protected (confirmed — they share a backend, so protecting only one
+just redirects spam to the other).
+
+**Honeypot**: hidden **checkbox** (not text field) named `website`,
+`aria-hidden`, `tabindex="-1"`, off-screen via new `.field-row-honeypot`
+CSS rule. Checkbox chosen specifically because browser/password-manager
+autofill can populate text fields named "website"/"url" with the user's own
+site, which would silently swallow real submissions — checkboxes aren't
+subject to that autofill heuristic. `spam_honeypot_tripped()` is true if the
+checkbox was submitted as checked at all.
+
+**Time-trap**: hidden `form_rendered_at` field set to `time()` at render;
+`spam_timetrap_tripped()` is true if missing or submitted within
+`SPAM_TIMETRAP_MIN_SECONDS` (3s) of render — a real human can't fill a
+3-field form that fast.
+
+Either trip → silent discard: redirect to `?sent=1` exactly as success, no
+DB row, no reCAPTCHA call.
+
+**reCAPTCHA v3**: new `app/helpers/recaptcha.php` (mirrors `oauth.php`
+conventions — global functions, `oauth_env()`, `oauth_http_request()`).
+`recaptcha_verify()` returns a score; `is_flagged = score <
+RECAPTCHA_SCORE_THRESHOLD (default 0.5) ? 1 : 0` at insert time — **low
+score saves the message but flags it** (visible via the ⚑ toggle shipped in
+Phase 15's `/admin/messages`) rather than rejecting outright, to avoid
+losing real messages to false positives. Empty token (no JS) or unset
+`RECAPTCHA_SECRET_KEY` also resolve to flagged-not-rejected, so the form
+works (degraded) before keys are configured. **Transport failures (network
+error, malformed siteverify response) fail OPEN** — saved unflagged, as if
+score were above threshold. Named, accepted tradeoff: a Google outage
+silently degrades protection to honeypot/time-trap only.
+
+`contact_messages.is_flagged` already existed (Phase 15) — no migration.
+
+`grecaptcha.execute(siteKey, {action: 'contact'})` runs on form submit
+(token is short-lived/single-use, can't be fetched at page load); inline
+submit-handler script in `page.php`/`about.php`, gated on
+`$recaptchaSiteKey` so it's omitted entirely until keys are set.
+
+### Files Updated (Phase 17)
+- `.env` — `RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY`,
+  `RECAPTCHA_SCORE_THRESHOLD` (all blank/default; see Resolved checkpoints)
+- `app/helpers/recaptcha.php` (new)
+- `public/index.php` — require `recaptcha.php`
+- `public/assets/css/style.css` — `.field-row-honeypot`
+- `app/views/page.php`, `app/views/about.php` — honeypot checkbox,
+  time-trap field, recaptcha token field + submit-handler script
+- `app/controllers/PageController.php` — `show()`, `contact()`
+- `app/controllers/AboutController.php` — `index()`, `contact()`
+- `docs/dependencies.md` — new Google reCAPTCHA v3 entry
+- `CONSTRAINTS.md` — new constraint for the spam-mitigation pipeline
+
+### Resolved checkpoints
+- [ ] User needs to register `localhost`/`fornesusart.com` under one
+  reCAPTCHA v3 site key at https://www.google.com/recaptcha/admin and fill
+  `RECAPTCHA_SITE_KEY`/`RECAPTCHA_SECRET_KEY` into `.env`. Until then the
+  reCAPTCHA script is omitted and every submission is saved with
+  `is_flagged = 1` (honeypot/time-trap protection is still active).
+
+---
+
 <!-- Add a new dated section at the start of each phase following
      the same pattern. Resolved checkpoints from the prior phase
      should be marked [x] and left in place — do not delete them.
      They are the audit trail. If empty, begin with Phase 1. -->
+

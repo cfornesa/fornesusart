@@ -1,7 +1,6 @@
 <?php
 $pageTitle = 'Navigation — Fornesus Admin';
 $bodyClass = 'admin-body';
-$mainClass = 'admin-main admin-main-wide';
 ob_start();
 ?>
 <div class="admin-section nav-admin">

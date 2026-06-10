@@ -37,9 +37,14 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ADMIN_GITHUB_USERNAMES=yourgithubuser
 ADMIN_GOOGLE_EMAILS=you@example.com
+RECAPTCHA_SITE_KEY=...
+RECAPTCHA_SECRET_KEY=...
+RECAPTCHA_SCORE_THRESHOLD=0.5
 ```
 
 `ADMIN_GITHUB_USERNAMES` and `ADMIN_GOOGLE_EMAILS` are bootstrap allowlists. The first approved login from each provider creates an `admin_identities` record, and later `/admin` access is tied to that stored identity instead of a shared password.
+
+`RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` are optional. Register both your local and production domains under one reCAPTCHA v3 site key at https://www.google.com/recaptcha/admin. If left blank (or invalid), `/contact` and `/about` keep working — submissions are just saved with `is_flagged = 1` for review in `/admin/messages` instead of being score-checked. The honeypot and time-trap checks run regardless and need no configuration.
 
 ### 2. Create the database
 
@@ -205,6 +210,7 @@ fornesusart/
 │   └── helpers/
 │       ├── auth.php                admin_check(), admin_login_identity(), admin_logout()
 │       ├── oauth.php               provider config + token/profile exchange helpers
+│       ├── recaptcha.php           reCAPTCHA v3 verification + honeypot/time-trap spam checks
 │       ├── seo.php                 seo_excerpt(), seo_absolute_url()
 │       ├── upload.php              MIME-validated image/video blob upload helpers
 │       └── slugify.php             slugify(), unique_slug()

@@ -143,6 +143,10 @@
 
 2026-06-04 · DIRECTION · Requested a more colorful, combined celestial background featuring watercolor washes, dynamic nebulas, and coordinate grids while strictly enforcing hardware-accelerated, zero-repaint animations to preserve mobile device battery/resources.
 
+2026-06-09 · DIRECTION · Chose a custom interactive tag-based search-and-select dropdown widget for multi-select inputs on the admin artwork form instead of standard checkboxes or native select fields.
+
+2026-06-09 · DIRECTION · Chose a native HTML5 <dialog> element styled with a blur backdrop and dark celestial archive styling to handle inline category/exhibit renaming and confirmation overlay.
+
 ---
 
 <!-- The agent holds the brush. You choose what gets painted.

@@ -19,9 +19,19 @@ ob_start();
                 <h2 class="category-name" id="gallery-exhibits-heading">Exhibits</h2>
                 <span class="section-rule" aria-hidden="true"></span>
             </div>
-            <div class="exhibits-grid">
+            <div class="artwork-grid">
                 <?php foreach ($exhibits as $exIndex => $ex): ?>
-                    <a href="/exhibit/<?= htmlspecialchars($ex['slug']) ?>" class="exhibit-card" aria-label="View exhibit <?= htmlspecialchars($ex['name']) ?>">
+                    <?php
+                    $sizeClass = match ($exIndex % 7) {
+                        0       => 'size-large',
+                        1, 2    => 'size-small',
+                        3       => 'size-medium',
+                        4       => 'size-wide',
+                        5, 6    => 'size-small',
+                        default => 'size-medium',
+                    };
+                    ?>
+                    <a href="/exhibit/<?= htmlspecialchars($ex['slug']) ?>" class="artwork-card <?= $sizeClass ?>" aria-label="View exhibit <?= htmlspecialchars($ex['name']) ?>">
                         <div class="artwork-thumb-wrap">
                             <?php if ($ex['thumbnail_value']): ?>
                                 <img
@@ -54,22 +64,12 @@ ob_start();
         <?php if (empty($artworks)): ?>
             <p class="gallery-empty">No works have been added yet.</p>
         <?php else: ?>
-            <div class="artwork-grid" id="gallery-work-grid">
+            <div class="exhibits-grid" id="gallery-work-grid">
                 <?php foreach ($artworks as $i => $work): ?>
-                    <?php
-                    $sizeClass = match ($i % 7) {
-                        0       => 'size-large',
-                        1, 2    => 'size-small',
-                        3       => 'size-medium',
-                        4       => 'size-wide',
-                        5, 6    => 'size-small',
-                        default => 'size-medium',
-                    };
-                    $hidden = $i >= 3 ? 'gallery-work-overflow' : '';
-                    ?>
+                    <?php $hidden = $i >= 3 ? 'gallery-work-overflow' : ''; ?>
                     <a href="/work/<?= htmlspecialchars($work['slug']) ?>"
                        aria-label="View work <?= htmlspecialchars($work['title'] . ($work['year'] ? ', ' . $work['year'] : '')) ?>"
-                       class="artwork-card <?= $sizeClass ?> <?= $hidden ?>">
+                       class="exhibit-card <?= $hidden ?>">
                         <div class="artwork-thumb-wrap">
                             <?php if ($work['thumbnail_value']): ?>
                                 <img

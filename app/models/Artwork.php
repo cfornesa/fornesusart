@@ -6,13 +6,14 @@ class Artwork
 {
     public static function allSorted(): array
     {
-        return db()->query(
-            'SELECT a.*, c.name AS category_name, c.slug AS category_slug
+        $rows = db()->query(
+            'SELECT a.*
              FROM artworks a
-             LEFT JOIN categories c ON a.category_id = c.id
              WHERE a.deleted_at IS NULL
              ORDER BY a.sort_order ASC, a.id ASC'
         )->fetchAll();
+
+        return self::attachExhibits(self::attachCategories($rows));
     }
 
     public static function allGroupedByCategory(): array
@@ -47,21 +48,21 @@ class Artwork
 
     public static function all(): array
     {
-        return db()->query(
-            'SELECT a.*, c.name AS category_name, c.slug AS category_slug
+        $rows = db()->query(
+            'SELECT a.*
              FROM artworks a
-             LEFT JOIN categories c ON a.category_id = c.id
              WHERE a.deleted_at IS NULL
              ORDER BY a.sort_order ASC, a.id ASC'
         )->fetchAll();
+
+        return self::attachExhibits(self::attachCategories($rows));
     }
 
     public static function find(int $id): array|false
     {
         $stmt = db()->prepare(
-            'SELECT a.*, c.name AS category_name, c.slug AS category_slug
+            'SELECT a.*
              FROM artworks a
-             LEFT JOIN categories c ON a.category_id = c.id
              WHERE a.id = ? AND a.deleted_at IS NULL'
         );
         $stmt->execute([$id]);
@@ -72,9 +73,8 @@ class Artwork
     public static function findBySlug(string $slug): array|false
     {
         $stmt = db()->prepare(
-            'SELECT a.*, c.name AS category_name, c.slug AS category_slug
+            'SELECT a.*
              FROM artworks a
-             LEFT JOIN categories c ON a.category_id = c.id
              WHERE a.slug = ? AND a.deleted_at IS NULL'
         );
         $stmt->execute([$slug]);
@@ -84,13 +84,14 @@ class Artwork
 
     public static function trashed(): array
     {
-        return db()->query(
-            'SELECT a.*, c.name AS category_name
+        $rows = db()->query(
+            'SELECT a.*
              FROM artworks a
-             LEFT JOIN categories c ON a.category_id = c.id
              WHERE a.deleted_at IS NOT NULL
              ORDER BY a.deleted_at DESC'
         )->fetchAll();
+
+        return self::attachExhibits(self::attachCategories($rows));
     }
 
     public static function trashedCount(): int
@@ -104,13 +105,12 @@ class Artwork
     {
         $stmt = db()->prepare(
             'INSERT INTO artworks
-                (category_id, title, artist_name, slug, year, medium, dimensions, description, placard_notes,
+                (title, artist_name, slug, year, medium, dimensions, description, placard_notes,
                  thumbnail_type, thumbnail_value,
                  piece_type, piece_value, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
-            $data['category_id'] ?: null,
             $data['title'],
             $data['artist_name'] ?: null,
             $data['slug'],
@@ -132,14 +132,13 @@ class Artwork
     {
         $stmt = db()->prepare(
             'UPDATE artworks SET
-                category_id = ?, title = ?, artist_name = ?, slug = ?, year = ?, medium = ?, dimensions = ?,
+                title = ?, artist_name = ?, slug = ?, year = ?, medium = ?, dimensions = ?,
                 description = ?, placard_notes = ?,
                 thumbnail_type = ?, thumbnail_value = ?,
                 piece_type = ?, piece_value = ?, sort_order = ?
              WHERE id = ?'
         );
         $stmt->execute([
-            $data['category_id'] ?: null,
             $data['title'],
             $data['artist_name'] ?: null,
             $data['slug'],
@@ -224,7 +223,116 @@ class Artwork
     private static function decorate(array $artwork): array
     {
         $artwork['media_items'] = self::resolvedMediaItems($artwork);
+        $artwork['categories']  = self::categoriesFor((int) $artwork['id']);
+        $artwork['exhibits']    = self::exhibitsFor((int) $artwork['id']);
         return $artwork;
+    }
+
+    public static function categoriesFor(int $artworkId): array
+    {
+        $stmt = db()->prepare(
+            'SELECT c.id, c.name, c.slug
+             FROM artwork_categories ac
+             JOIN categories c ON c.id = ac.category_id AND c.deleted_at IS NULL
+             WHERE ac.artwork_id = ?
+             ORDER BY c.sort_order ASC, c.id ASC'
+        );
+        $stmt->execute([$artworkId]);
+        return $stmt->fetchAll();
+    }
+
+    public static function categoryIds(int $id): array
+    {
+        $stmt = db()->prepare('SELECT category_id FROM artwork_categories WHERE artwork_id = ?');
+        $stmt->execute([$id]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    public static function syncCategories(int $id, array $categoryIds): void
+    {
+        $pdo = db();
+        $del = $pdo->prepare('DELETE FROM artwork_categories WHERE artwork_id = ?');
+        $del->execute([$id]);
+
+        if (empty($categoryIds)) {
+            return;
+        }
+
+        $ins = $pdo->prepare('INSERT INTO artwork_categories (artwork_id, category_id) VALUES (?, ?)');
+        foreach (array_unique(array_map('intval', $categoryIds)) as $categoryId) {
+            $ins->execute([$id, $categoryId]);
+        }
+    }
+
+    private static function attachCategories(array $artworks): array
+    {
+        if ($artworks === []) {
+            return $artworks;
+        }
+
+        $ids = array_map(static fn (array $a): int => (int) $a['id'], $artworks);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = db()->prepare(
+            "SELECT ac.artwork_id, c.id, c.name, c.slug
+             FROM artwork_categories ac
+             JOIN categories c ON c.id = ac.category_id AND c.deleted_at IS NULL
+             WHERE ac.artwork_id IN ($placeholders)
+             ORDER BY c.sort_order ASC, c.id ASC"
+        );
+        $stmt->execute($ids);
+
+        $byArtwork = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byArtwork[$row['artwork_id']][] = ['id' => $row['id'], 'name' => $row['name'], 'slug' => $row['slug']];
+        }
+
+        foreach ($artworks as &$artwork) {
+            $artwork['categories'] = $byArtwork[$artwork['id']] ?? [];
+        }
+
+        return $artworks;
+    }
+
+    public static function exhibitsFor(int $artworkId): array
+    {
+        $stmt = db()->prepare(
+            'SELECT e.id, e.name, e.slug
+             FROM exhibit_artworks ea
+             JOIN exhibits e ON e.id = ea.exhibit_id AND e.deleted_at IS NULL
+             WHERE ea.artwork_id = ?
+             ORDER BY e.sort_order ASC, e.id ASC'
+        );
+        $stmt->execute([$artworkId]);
+        return $stmt->fetchAll();
+    }
+
+    private static function attachExhibits(array $artworks): array
+    {
+        if ($artworks === []) {
+            return $artworks;
+        }
+
+        $ids = array_map(static fn (array $a): int => (int) $a['id'], $artworks);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = db()->prepare(
+            "SELECT ea.artwork_id, e.id, e.name, e.slug
+             FROM exhibit_artworks ea
+             JOIN exhibits e ON e.id = ea.exhibit_id AND e.deleted_at IS NULL
+             WHERE ea.artwork_id IN ($placeholders)
+             ORDER BY e.sort_order ASC, e.id ASC"
+        );
+        $stmt->execute($ids);
+
+        $byArtwork = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byArtwork[$row['artwork_id']][] = ['id' => $row['id'], 'name' => $row['name'], 'slug' => $row['slug']];
+        }
+
+        foreach ($artworks as &$artwork) {
+            $artwork['exhibits'] = $byArtwork[$artwork['id']] ?? [];
+        }
+
+        return $artworks;
     }
 
     public static function softDelete(int $id): void

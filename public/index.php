@@ -13,6 +13,7 @@ if (PHP_SAPI === 'cli-server') {
 require dirname(__DIR__) . '/app/bootstrap.php';
 require dirname(__DIR__) . '/app/helpers/auth.php';
 require dirname(__DIR__) . '/app/helpers/oauth.php';
+require dirname(__DIR__) . '/app/helpers/recaptcha.php';
 require dirname(__DIR__) . '/app/helpers/seo.php';
 require dirname(__DIR__) . '/app/models/MediaFile.php';
 require dirname(__DIR__) . '/app/models/AdminIdentity.php';
@@ -26,6 +27,7 @@ require dirname(__DIR__) . '/app/models/BioSection.php';
 require dirname(__DIR__) . '/app/models/Page.php';
 require dirname(__DIR__) . '/app/models/PageSection.php';
 require dirname(__DIR__) . '/app/models/NavigationItem.php';
+require dirname(__DIR__) . '/app/models/ContactMessage.php';
 require dirname(__DIR__) . '/app/controllers/GalleryController.php';
 require dirname(__DIR__) . '/app/controllers/WorkController.php';
 require dirname(__DIR__) . '/app/controllers/AboutController.php';
@@ -85,6 +87,7 @@ $routes = [
     ['GET',  '/admin/categories',                      [AdminController::class, 'categoriesIndex']],
     ['GET',  '/admin/categories/create',               [AdminController::class, 'categoryCreate']],
     ['POST', '/admin/categories/create',               [AdminController::class, 'categoryStore']],
+    ['POST', '/admin/categories/create-inline',        [AdminController::class, 'categoryCreateInline']],
     ['GET',  '/admin/categories/([0-9]+)/edit',        [AdminController::class, 'categoryEdit']],
     ['POST', '/admin/categories/([0-9]+)/edit',        [AdminController::class, 'categoryUpdate']],
     ['POST', '/admin/categories/([0-9]+)/delete',      [AdminController::class, 'categoryDelete']],
@@ -94,6 +97,7 @@ $routes = [
     ['GET',  '/admin/exhibits',                        [AdminController::class, 'exhibitsIndex']],
     ['GET',  '/admin/exhibits/create',                 [AdminController::class, 'exhibitCreate']],
     ['POST', '/admin/exhibits/create',                 [AdminController::class, 'exhibitStore']],
+    ['POST', '/admin/exhibits/create-inline',          [AdminController::class, 'exhibitCreateInline']],
     ['GET',  '/admin/exhibits/([0-9]+)/edit',          [AdminController::class, 'exhibitEdit']],
     ['POST', '/admin/exhibits/([0-9]+)/edit',          [AdminController::class, 'exhibitUpdate']],
     ['POST', '/admin/exhibits/([0-9]+)/delete',        [AdminController::class, 'exhibitDelete']],
@@ -129,6 +133,11 @@ $routes = [
 
     // Admin messages
     ['GET',  '/admin/messages',                        [AdminController::class, 'messagesIndex']],
+    ['POST', '/admin/messages/reorder',                [AdminController::class, 'messageReorder']],
+    ['POST', '/admin/messages/([0-9]+)/toggle-read',   [AdminController::class, 'messageToggleRead']],
+    ['POST', '/admin/messages/([0-9]+)/toggle-flag',   [AdminController::class, 'messageToggleFlag']],
+    ['POST', '/admin/messages/([0-9]+)/toggle-pin',    [AdminController::class, 'messageTogglePin']],
+    ['POST', '/admin/messages/([0-9]+)/delete',        [AdminController::class, 'messageDelete']],
 
     // Admin media library
     ['GET',  '/admin/media/library',                   [AdminController::class, 'mediaLibrary']],

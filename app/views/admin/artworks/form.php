@@ -33,17 +33,50 @@ ob_start();
             <input type="text" name="year" value="<?= htmlspecialchars($artwork['year'] ?? '') ?>" placeholder="2024">
         </div>
 
-        <div class="form-row">
-            <label>Category</label>
-            <select name="category_id">
-                <option value="">— None —</option>
-                <?php foreach ($categories as $cat): ?>
-                    <option value="<?= $cat['id'] ?>"
-                        <?= ($artwork['category_id'] ?? '') == $cat['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($cat['name']) ?>
-                    </option>
-                <?php endforeach ?>
-            </select>
+        <div class="form-row custom-multiselect-row" id="categories-multiselect-row">
+            <label>Categories</label>
+            <div class="multiselect-control" data-name="category_ids" data-placeholder="Select categories...">
+                <div class="multiselect-input-wrapper">
+                    <div class="multiselect-tags"></div>
+                    <input type="text" class="multiselect-search" placeholder="Select categories..." autocomplete="off">
+                </div>
+                <div class="multiselect-dropdown">
+                    <?php foreach ($categories as $cat): ?>
+                        <div class="multiselect-option" data-id="<?= $cat['id'] ?>" data-name="<?= htmlspecialchars($cat['name']) ?>"
+                             <?= in_array((string) $cat['id'], array_map('strval', $assignedCategoryIds)) ? 'data-selected="true"' : '' ?>>
+                            <?= htmlspecialchars($cat['name']) ?>
+                        </div>
+                    <?php endforeach ?>
+                </div>
+                <div class="multiselect-hidden-inputs">
+                    <?php foreach ($assignedCategoryIds as $catId): ?>
+                        <input type="hidden" name="category_ids[]" value="<?= $catId ?>">
+                    <?php endforeach ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row custom-multiselect-row" id="exhibits-multiselect-row">
+            <label>Exhibits</label>
+            <div class="multiselect-control" data-name="exhibit_ids" data-placeholder="Select exhibits...">
+                <div class="multiselect-input-wrapper">
+                    <div class="multiselect-tags"></div>
+                    <input type="text" class="multiselect-search" placeholder="Select exhibits..." autocomplete="off">
+                </div>
+                <div class="multiselect-dropdown">
+                    <?php foreach ($allExhibits as $ex): ?>
+                        <div class="multiselect-option" data-id="<?= $ex['id'] ?>" data-name="<?= htmlspecialchars($ex['name']) ?>"
+                             <?= in_array((string) $ex['id'], array_map('strval', $assignedExhibitIds)) ? 'data-selected="true"' : '' ?>>
+                            <?= htmlspecialchars($ex['name']) ?>
+                        </div>
+                    <?php endforeach ?>
+                </div>
+                <div class="multiselect-hidden-inputs">
+                    <?php foreach ($assignedExhibitIds as $exId): ?>
+                        <input type="hidden" name="exhibit_ids[]" value="<?= $exId ?>">
+                    <?php endforeach ?>
+                </div>
+            </div>
         </div>
 
         <div class="form-row">
@@ -336,6 +369,22 @@ ob_start();
             <a href="/admin/artworks" class="admin-btn admin-btn-ghost">Cancel</a>
         </div>
     </form>
+
+    <dialog id="inline-create-dialog" class="inline-create-dialog">
+        <div class="dialog-header">
+            <h2 id="inline-dialog-title">Create New Category</h2>
+        </div>
+        <div class="dialog-body">
+            <p>You are about to create a new <span id="inline-dialog-type">category</span> in the database. You can rename it below:</p>
+            <div class="form-row">
+                <input type="text" id="inline-dialog-name-input" placeholder="Name" autocomplete="off">
+            </div>
+        </div>
+        <div class="dialog-footer">
+            <button type="button" class="admin-btn admin-btn-ghost" id="inline-dialog-cancel-btn">Cancel</button>
+            <button type="button" class="admin-btn" id="inline-dialog-confirm-btn">Create</button>
+        </div>
+    </dialog>
 </div>
 <?php
 $content = ob_get_clean();

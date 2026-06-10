@@ -1,6 +1,5 @@
 <?php
 $pageTitle = 'Media Library — Fornesus Art Admin';
-$mainClass = 'admin-main-wide';
 ob_start();
 ?>
 <div class="admin-section media-library-page">

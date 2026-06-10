@@ -538,3 +538,303 @@ document.querySelectorAll('.toggle-group').forEach(group => {
 
     syncUi();
 })();
+
+// ─── Custom Multiselect Widget ───────────────────────────────────────────
+(function () {
+    function initMultiselects() {
+        const controls = document.querySelectorAll('.multiselect-control');
+        controls.forEach(control => {
+            const name = control.dataset.name;
+            const placeholder = control.dataset.placeholder || 'Select...';
+            const tagsContainer = control.querySelector('.multiselect-tags');
+            const searchInput = control.querySelector('.multiselect-search');
+            const dropdown = control.querySelector('.multiselect-dropdown');
+            const hiddenContainer = control.querySelector('.multiselect-hidden-inputs');
+            let options = Array.from(control.querySelectorAll('.multiselect-option'));
+
+            // Create Option Add element dynamically
+            const addOptionDiv = document.createElement('div');
+            addOptionDiv.className = 'multiselect-option-add';
+            addOptionDiv.style.display = 'none';
+            dropdown.appendChild(addOptionDiv);
+
+            addOptionDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const query = searchInput.value.trim();
+                if (query !== '') {
+                    triggerInlineCreation(query);
+                }
+            });
+
+            // Helper to update placeholder
+            function updatePlaceholder() {
+                if (tagsContainer.children.length > 0) {
+                    searchInput.placeholder = '';
+                } else {
+                    searchInput.placeholder = placeholder;
+                }
+            }
+
+            // Helper to add tag
+            function addTag(id, labelName) {
+                if (tagsContainer.querySelector(`[data-id="${id}"]`)) return;
+
+                const tag = document.createElement('div');
+                tag.className = 'multiselect-tag';
+                tag.dataset.id = id;
+                tag.innerHTML = `
+                    <span>${escapeHtml(labelName)}</span>
+                    <button type="button" class="multiselect-tag-remove" aria-label="Remove tag">&times;</button>
+                `;
+
+                tag.querySelector('.multiselect-tag-remove').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeTag(id);
+                });
+
+                tagsContainer.appendChild(tag);
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = `${name}[]`;
+                input.value = id;
+                input.dataset.id = id;
+                hiddenContainer.appendChild(input);
+
+                const option = options.find(o => o.dataset.id === String(id));
+                if (option) {
+                    option.dataset.selected = 'true';
+                }
+
+                updatePlaceholder();
+            }
+
+            // Helper to remove tag
+            function removeTag(id) {
+                const tag = tagsContainer.querySelector(`.multiselect-tag[data-id="${id}"]`);
+                if (tag) tag.remove();
+
+                const input = hiddenContainer.querySelector(`input[data-id="${id}"]`);
+                if (input) input.remove();
+
+                const option = options.find(o => o.dataset.id === String(id));
+                if (option) {
+                    delete option.dataset.selected;
+                }
+
+                updatePlaceholder();
+            }
+
+            function triggerInlineCreation(query) {
+                const type = name === 'category_ids' ? 'category' : 'exhibit';
+                openInlineCreateDialog(query, type, (finalName) => {
+                    const url = type === 'category' ? '/admin/categories/create-inline' : '/admin/exhibits/create-inline';
+                    
+                    addOptionDiv.textContent = `Creating "${finalName}"...`;
+                    addOptionDiv.style.pointerEvents = 'none';
+                    searchInput.disabled = true;
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ name: finalName })
+                    })
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.json().then(err => { throw new Error(err.error || 'Failed to create'); });
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        const newOpt = document.createElement('div');
+                        newOpt.className = 'multiselect-option';
+                        newOpt.dataset.id = data.id;
+                        newOpt.dataset.name = data.name;
+                        newOpt.textContent = data.name;
+
+                        dropdown.insertBefore(newOpt, addOptionDiv);
+                        options.push(newOpt);
+
+                        newOpt.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (newOpt.dataset.selected === 'true') {
+                                removeTag(newOpt.dataset.id);
+                            } else {
+                                addTag(newOpt.dataset.id, newOpt.dataset.name);
+                            }
+                            searchInput.value = '';
+                            options.forEach(o => o.style.display = '');
+                            searchInput.focus();
+                        });
+
+                        addTag(data.id, data.name);
+
+                        searchInput.value = '';
+                        options.forEach(o => o.style.display = '');
+                        addOptionDiv.style.display = 'none';
+                    })
+                    .catch(err => {
+                        alert(`Error creating ${type}: ${err.message}`);
+                    })
+                    .finally(() => {
+                        searchInput.disabled = false;
+                        addOptionDiv.style.pointerEvents = '';
+                        searchInput.focus();
+                    });
+                });
+            }
+
+            // Initialize existing tags (from data-selected options)
+            options.forEach(opt => {
+                if (opt.dataset.selected === 'true') {
+                    addTag(opt.dataset.id, opt.dataset.name);
+                }
+            });
+
+            // Toggle dropdown
+            searchInput.addEventListener('focus', () => {
+                control.classList.add('focus');
+                dropdown.style.display = 'block';
+            });
+
+            // Click wrapper focuses search input
+            control.addEventListener('click', (e) => {
+                if (e.target !== searchInput && !e.target.closest('.multiselect-dropdown') && !e.target.closest('.multiselect-tag-remove')) {
+                    searchInput.focus();
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!control.contains(e.target)) {
+                    control.classList.remove('focus');
+                    dropdown.style.display = 'none';
+                    searchInput.value = '';
+                    options.forEach(opt => opt.style.display = '');
+                    addOptionDiv.style.display = 'none';
+                }
+            });
+
+            // Search filter
+            searchInput.addEventListener('input', () => {
+                const query = searchInput.value.trim();
+                const queryLower = query.toLowerCase();
+
+                let exactMatchFound = false;
+                options.forEach(opt => {
+                    const text = opt.dataset.name.toLowerCase();
+                    if (text.includes(queryLower)) {
+                        opt.style.display = '';
+                    } else {
+                        opt.style.display = 'none';
+                    }
+                    if (text === queryLower) {
+                        exactMatchFound = true;
+                    }
+                });
+
+                if (query !== '' && !exactMatchFound) {
+                    const typeLabel = name === 'category_ids' ? 'Category' : 'Exhibit';
+                    addOptionDiv.textContent = `+ Create ${typeLabel} "${query}"`;
+                    addOptionDiv.style.display = 'block';
+                } else {
+                    addOptionDiv.style.display = 'none';
+                }
+            });
+
+            // Keyboard navigation and Enter press
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const query = searchInput.value.trim();
+                    if (query === '') return;
+
+                    const exactMatch = options.find(opt => opt.style.display !== 'none' && opt.dataset.name.toLowerCase() === query.toLowerCase());
+                    if (exactMatch) {
+                        exactMatch.click();
+                    } else {
+                        triggerInlineCreation(query);
+                    }
+                }
+            });
+
+            // Select option
+            options.forEach(opt => {
+                opt.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (opt.dataset.selected === 'true') {
+                        removeTag(opt.dataset.id);
+                    } else {
+                        addTag(opt.dataset.id, opt.dataset.name);
+                    }
+                    searchInput.value = '';
+                    options.forEach(o => o.style.display = '');
+                    addOptionDiv.style.display = 'none';
+                    searchInput.focus();
+                });
+            });
+        });
+    }
+
+    function openInlineCreateDialog(query, type, onConfirm) {
+        const dialog = document.getElementById('inline-create-dialog');
+        if (!dialog) return;
+
+        const titleEl = document.getElementById('inline-dialog-title');
+        const typeEl = document.getElementById('inline-dialog-type');
+        const inputEl = document.getElementById('inline-dialog-name-input');
+        const confirmBtn = document.getElementById('inline-dialog-confirm-btn');
+        const cancelBtn = document.getElementById('inline-dialog-cancel-btn');
+
+        titleEl.textContent = `Create New ${type === 'category' ? 'Category' : 'Exhibit'}`;
+        typeEl.textContent = type;
+        inputEl.value = query;
+
+        // Clone buttons to clear old event listeners
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+        function handleConfirm() {
+            const finalName = inputEl.value.trim();
+            if (finalName === '') {
+                alert('Name is required.');
+                return;
+            }
+            dialog.close();
+            onConfirm(finalName);
+        }
+
+        newConfirmBtn.addEventListener('click', handleConfirm);
+        newCancelBtn.addEventListener('click', () => dialog.close());
+
+        // Handle Enter key inside the dialog input
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleConfirm();
+            }
+        });
+
+        dialog.showModal();
+        inputEl.focus();
+        inputEl.select();
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;')
+                  .replace(/'/g, '&#039;');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMultiselects);
+    } else {
+        initMultiselects();
+    }
+})();
+

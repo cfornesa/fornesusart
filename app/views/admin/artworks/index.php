@@ -19,6 +19,7 @@ ob_start();
                     <th>Title</th>
                     <th>Year</th>
                     <th>Category</th>
+                    <th>Exhibit</th>
                     <th>Slides</th>
                     <th></th>
                 </tr>
@@ -33,7 +34,8 @@ ob_start();
                             </a>
                         </td>
                         <td><?= htmlspecialchars($w['year'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($w['category_name'] ?? '—') ?></td>
+                        <td><?= htmlspecialchars(implode(', ', array_column($w['categories'] ?? [], 'name')) ?: '—') ?></td>
+                        <td><?= htmlspecialchars(implode(', ', array_column($w['exhibits'] ?? [], 'name')) ?: '—') ?></td>
                         <td><?= count($w['media_items'] ?? Artwork::resolvedMediaItems($w)) ?></td>
                         <td class="admin-actions">
                             <a href="/admin/artworks/<?= $w['id'] ?>/edit">Edit</a>

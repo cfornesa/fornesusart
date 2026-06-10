@@ -3,7 +3,7 @@ $pageTitle  = ($artwork['title'] ?? 'Work') . ' ';
 $activePage = 'gallery';
 $metaTitle = ($artwork['title'] ?: 'Work') . ' — Fornesus Art';
 $metaDescription = seo_excerpt($artwork['description'] ?? null, 170)
-    ?: trim(($artwork['year'] ? $artwork['year'] . ' · ' : '') . ($artwork['category_name'] ?? 'Artwork from Fornesus Art'));
+    ?: trim(($artwork['year'] ? $artwork['year'] . ' · ' : '') . ($artwork['categories'][0]['name'] ?? 'Artwork from Fornesus Art'));
 $ogTitle = $metaTitle;
 $ogDescription = $metaDescription;
 $metaImage = Artwork::previewImage($artwork);
@@ -25,11 +25,14 @@ ob_start();
                 <?php if ($artwork['year']): ?>
                     <span class="work-year"><?= htmlspecialchars($artwork['year']) ?></span>
                 <?php endif ?>
-                <?php if ($artwork['category_name']): ?>
-                    <span class="work-cat-sep">·</span>
-                    <a href="/category/<?= htmlspecialchars($artwork['category_slug']) ?>" class="work-category">
-                        <?= htmlspecialchars($artwork['category_name']) ?>
-                    </a>
+                <?php if (!empty($artwork['categories'])): ?>
+                    <span class="work-cat-sep">&middot;</span>
+                    <?php foreach ($artwork['categories'] as $i => $cat): ?>
+                        <?php if ($i > 0): ?><span class="work-cat-sep">,</span><?php endif ?>
+                        <a href="/category/<?= htmlspecialchars($cat['slug']) ?>" class="work-category">
+                            <?= htmlspecialchars($cat['name']) ?>
+                        </a>
+                    <?php endforeach ?>
                 <?php endif ?>
             </div>
         </div>

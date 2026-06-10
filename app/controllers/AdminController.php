@@ -225,6 +225,9 @@ class AdminController
     {
         admin_check();
         $categories = Category::all();
+        $allExhibits = Exhibit::all();
+        $assignedCategoryIds = [];
+        $assignedExhibitIds = [];
         $artwork    = ['media_items' => []];
         $error      = null;
         require dirname(__DIR__) . '/views/admin/artworks/form.php';
@@ -238,10 +241,15 @@ class AdminController
             $data = self::resolveArtworkData(null);
             $artworkId = Artwork::create($data);
             ArtworkMediaItem::syncForArtwork($artworkId, $data['media_items']);
+            Artwork::syncCategories($artworkId, $data['category_ids']);
+            Exhibit::syncForArtwork($artworkId, $data['exhibit_ids']);
             header('Location: /admin/artworks');
         } catch (Throwable $e) {
             $categories = Category::all();
+            $allExhibits = Exhibit::all();
             $artwork    = self::draftArtworkFromPost(null);
+            $assignedCategoryIds = $artwork['category_ids'];
+            $assignedExhibitIds = $artwork['exhibit_ids'];
             $error      = $e->getMessage();
             require dirname(__DIR__) . '/views/admin/artworks/form.php';
         }
@@ -257,6 +265,9 @@ class AdminController
             exit;
         }
         $categories = Category::all();
+        $allExhibits = Exhibit::all();
+        $assignedCategoryIds = Artwork::categoryIds((int) $id);
+        $assignedExhibitIds = Exhibit::exhibitIdsForArtwork((int) $id);
         $error      = null;
         require dirname(__DIR__) . '/views/admin/artworks/form.php';
     }
@@ -269,10 +280,15 @@ class AdminController
             $data = self::resolveArtworkData((int) $id);
             Artwork::update((int) $id, $data);
             ArtworkMediaItem::syncForArtwork((int) $id, $data['media_items']);
+            Artwork::syncCategories((int) $id, $data['category_ids']);
+            Exhibit::syncForArtwork((int) $id, $data['exhibit_ids']);
             header('Location: /admin/artworks');
         } catch (Throwable $e) {
             $artwork    = self::draftArtworkFromPost((int) $id);
             $categories = Category::all();
+            $allExhibits = Exhibit::all();
+            $assignedCategoryIds = $artwork['category_ids'];
+            $assignedExhibitIds = $artwork['exhibit_ids'];
             $error      = $e->getMessage();
             require dirname(__DIR__) . '/views/admin/artworks/form.php';
         }
@@ -365,6 +381,30 @@ class AdminController
         header('Location: /admin/categories');
         exit;
     }
+
+    public static function categoryCreateInline(): void
+    {
+        admin_check();
+        header('Content-Type: application/json');
+
+        $name = trim($_POST['name'] ?? '');
+        if (!$name) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Name is required.']);
+            exit;
+        }
+
+        try {
+            $slug = unique_category_slug($name);
+            $id = Category::create($name, $slug);
+            echo json_encode(['success' => true, 'id' => $id, 'name' => $name, 'slug' => $slug]);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
 
     public static function categoryEdit(string $id): void
     {
@@ -783,10 +823,50 @@ class AdminController
     public static function messagesIndex(): void
     {
         admin_check();
-        $messages = db()->query(
-            'SELECT * FROM contact_messages ORDER BY created_at DESC'
-        )->fetchAll();
+        $messages = ContactMessage::all();
         require dirname(__DIR__) . '/views/admin/messages.php';
+    }
+
+    public static function messageToggleRead(string $id): void
+    {
+        admin_check();
+        ContactMessage::toggleRead((int) $id);
+        header('Location: /admin/messages');
+        exit;
+    }
+
+    public static function messageToggleFlag(string $id): void
+    {
+        admin_check();
+        ContactMessage::toggleFlagged((int) $id);
+        header('Location: /admin/messages');
+        exit;
+    }
+
+    public static function messageTogglePin(string $id): void
+    {
+        admin_check();
+        ContactMessage::togglePinned((int) $id);
+        header('Location: /admin/messages');
+        exit;
+    }
+
+    public static function messageReorder(): void
+    {
+        admin_check();
+        $ids = array_filter(array_map('intval', explode(',', $_POST['ids'] ?? '')));
+        ContactMessage::reorder(array_values($ids));
+        header('Content-Type: application/json');
+        echo '{"ok":true}';
+        exit;
+    }
+
+    public static function messageDelete(string $id): void
+    {
+        admin_check();
+        ContactMessage::softDelete((int) $id);
+        header('Location: /admin/messages');
+        exit;
     }
 
     // ── Internal ──────────────────────────────────────────────────────────
@@ -801,7 +881,6 @@ class AdminController
         $dimensions = trim($_POST['dimensions'] ?? '');
         $desc = trim($_POST['description'] ?? '');
         $placardNotes = trim($_POST['placard_notes'] ?? '');
-        $catId = (int) ($_POST['category_id'] ?? 0);
         $sort = (int) ($_POST['sort_order'] ?? 0);
 
         if (!$title) {
@@ -843,7 +922,6 @@ class AdminController
             'artist_name'      => $artistName,
             'medium'           => $medium,
             'dimensions'       => $dimensions,
-            'category_id'      => $catId ?: null,
             'description'      => $desc,
             'placard_notes'    => $placardNotes,
             'thumbnail_type'   => $thumbType,
@@ -852,6 +930,8 @@ class AdminController
             'piece_value'      => $legacyPiece['piece_value'],
             'sort_order'       => $sort,
             'media_items'      => $mediaItems,
+            'category_ids'     => array_map('intval', $_POST['category_ids'] ?? []),
+            'exhibit_ids'      => array_map('intval', $_POST['exhibit_ids'] ?? []),
         ];
     }
 
@@ -936,7 +1016,10 @@ class AdminController
             'artist_name' => trim((string) ($_POST['artist_name'] ?? ($existing['artist_name'] ?? ''))),
             'medium' => trim((string) ($_POST['medium'] ?? ($existing['medium'] ?? ''))),
             'dimensions' => trim((string) ($_POST['dimensions'] ?? ($existing['dimensions'] ?? ''))),
-            'category_id' => (int) ($_POST['category_id'] ?? ($existing['category_id'] ?? 0)),
+            'category_ids' => array_map('intval', $_POST['category_ids']
+                ?? ($existing ? Artwork::categoryIds((int) $existing['id']) : [])),
+            'exhibit_ids' => array_map('intval', $_POST['exhibit_ids']
+                ?? ($existing ? Exhibit::exhibitIdsForArtwork((int) $existing['id']) : [])),
             'description' => trim((string) ($_POST['description'] ?? ($existing['description'] ?? ''))),
             'placard_notes' => trim((string) ($_POST['placard_notes'] ?? ($existing['placard_notes'] ?? ''))),
             'sort_order' => (int) ($_POST['sort_order'] ?? ($existing['sort_order'] ?? 0)),
@@ -1091,6 +1174,37 @@ class AdminController
         header('Location: /admin/exhibits');
         exit;
     }
+
+    public static function exhibitCreateInline(): void
+    {
+        admin_check();
+        header('Content-Type: application/json');
+
+        $name = trim($_POST['name'] ?? '');
+        if (!$name) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Name is required.']);
+            exit;
+        }
+
+        try {
+            $slug = Exhibit::uniqueSlug($name);
+            $id = Exhibit::create([
+                'name'            => $name,
+                'slug'            => $slug,
+                'description'     => '',
+                'thumbnail_type'  => null,
+                'thumbnail_value' => null,
+                'sort_order'      => 0,
+            ]);
+            echo json_encode(['success' => true, 'id' => $id, 'name' => $name, 'slug' => $slug]);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
 
     public static function exhibitEdit(string $id): void
     {
@@ -1274,6 +1388,7 @@ class AdminController
         $categories = Category::trashed();
         $exhibits   = Exhibit::trashed();
         $mediaFiles = MediaFile::trashed();
+        $messages   = ContactMessage::trashed();
         require dirname(__DIR__) . '/views/admin/trash.php';
     }
 
@@ -1287,12 +1402,14 @@ class AdminController
             'category' => Category::restore($id),
             'exhibit'  => Exhibit::restore($id),
             'media'    => MediaFile::restore($id),
+            'message'  => ContactMessage::restore($id),
             default    => null,
         };
         $tab = match ($type) {
             'artwork'  => 'artworks',
             'category' => 'categories',
             'exhibit'  => 'exhibits',
+            'message'  => 'messages',
             default    => $type,
         };
         header("Location: /admin/trash?tab={$tab}");
@@ -1309,12 +1426,14 @@ class AdminController
             'category' => Category::hardDelete($id),
             'exhibit'  => Exhibit::hardDelete($id),
             'media'    => MediaFile::hardDelete($id),
+            'message'  => ContactMessage::hardDelete($id),
             default    => null,
         };
         $tab = match ($type) {
             'artwork'  => 'artworks',
             'category' => 'categories',
             'exhibit'  => 'exhibits',
+            'message'  => 'messages',
             default    => $type,
         };
         header("Location: /admin/trash?tab={$tab}");
@@ -1344,6 +1463,11 @@ class AdminController
             case 'media':
                 foreach (MediaFile::trashed() as $f) {
                     MediaFile::hardDelete((int) $f['id']);
+                }
+                break;
+            case 'messages':
+                foreach (ContactMessage::trashed() as $m) {
+                    ContactMessage::hardDelete((int) $m['id']);
                 }
                 break;
         }

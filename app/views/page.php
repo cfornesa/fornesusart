@@ -44,7 +44,13 @@ ob_start();
                     <?php if ($contactError ?? null): ?>
                         <p class="contact-error" role="alert"><?= htmlspecialchars($contactError) ?></p>
                     <?php endif ?>
-                    <form class="contact-form" method="POST" action="/contact">
+                    <form class="contact-form" method="POST" action="/contact" id="contact-form-page">
+                        <div class="field-row field-row-honeypot" aria-hidden="true">
+                            <label for="contact-website-page">Website</label>
+                            <input type="checkbox" id="contact-website-page" name="website" value="1" tabindex="-1" autocomplete="off">
+                        </div>
+                        <input type="hidden" name="form_rendered_at" value="<?= time() ?>">
+                        <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response-page" value="">
                         <div class="field-row">
                             <label for="contact-name">Name</label>
                             <input
@@ -87,6 +93,36 @@ ob_start();
                         </div>
                         <button type="submit" class="contact-submit">Send</button>
                     </form>
+                    <?php if ($recaptchaSiteKey): ?>
+                        <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($recaptchaSiteKey) ?>"></script>
+                        <script>
+                        (function () {
+                            var form = document.getElementById('contact-form-page');
+                            var tokenField = document.getElementById('g-recaptcha-response-page');
+                            if (!form || !tokenField || typeof grecaptcha === 'undefined') {
+                                return;
+                            }
+                            form.addEventListener('submit', function (event) {
+                                if (form.dataset.recaptchaSubmitted === 'true') {
+                                    return;
+                                }
+                                event.preventDefault();
+                                grecaptcha.ready(function () {
+                                    grecaptcha.execute('<?= htmlspecialchars($recaptchaSiteKey) ?>', { action: 'contact' })
+                                        .then(function (token) {
+                                            tokenField.value = token;
+                                            form.dataset.recaptchaSubmitted = 'true';
+                                            form.submit();
+                                        })
+                                        .catch(function () {
+                                            form.dataset.recaptchaSubmitted = 'true';
+                                            form.submit();
+                                        });
+                                });
+                            });
+                        })();
+                        </script>
+                    <?php endif ?>
                 <?php endif ?>
             </section>
         <?php endif ?>

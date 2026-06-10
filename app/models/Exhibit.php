@@ -56,10 +56,9 @@ class Exhibit
     public static function artworks(int $id): array
     {
         $stmt = db()->prepare(
-            'SELECT a.*, c.name AS category_name, c.slug AS category_slug
+            'SELECT a.*
              FROM exhibit_artworks ea
              JOIN artworks a ON a.id = ea.artwork_id AND a.deleted_at IS NULL
-             LEFT JOIN categories c ON a.category_id = c.id
              WHERE ea.exhibit_id = ?
              ORDER BY ea.sort_order ASC, a.sort_order ASC, a.id ASC'
         );
@@ -73,6 +72,15 @@ class Exhibit
             'SELECT artwork_id FROM exhibit_artworks WHERE exhibit_id = ?'
         );
         $stmt->execute([$id]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    public static function exhibitIdsForArtwork(int $artworkId): array
+    {
+        $stmt = db()->prepare(
+            'SELECT exhibit_id FROM exhibit_artworks WHERE artwork_id = ?'
+        );
+        $stmt->execute([$artworkId]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
@@ -141,6 +149,26 @@ class Exhibit
         );
         foreach (array_values($artworkIds) as $i => $artworkId) {
             $ins->execute([$id, (int) $artworkId, $i]);
+        }
+    }
+
+    public static function syncForArtwork(int $artworkId, array $exhibitIds): void
+    {
+        $pdo = db();
+        $del = $pdo->prepare('DELETE FROM exhibit_artworks WHERE artwork_id = ?');
+        $del->execute([$artworkId]);
+
+        if (empty($exhibitIds)) {
+            return;
+        }
+
+        $ins = $pdo->prepare(
+            'INSERT INTO exhibit_artworks (exhibit_id, artwork_id, sort_order)
+             SELECT ?, ?, COALESCE(MAX(sort_order), -1) + 1
+             FROM exhibit_artworks WHERE exhibit_id = ?'
+        );
+        foreach (array_unique(array_map('intval', $exhibitIds)) as $exhibitId) {
+            $ins->execute([$exhibitId, $artworkId, $exhibitId]);
         }
     }
 

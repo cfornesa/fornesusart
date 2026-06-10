@@ -42,6 +42,17 @@ The **public-facing site has no font/CDN dependency at all**. Remaining off-doma
 
 ---
 
+### Google reCAPTCHA v3 — contact form spam mitigation
+
+**Provider**: `https://www.google.com/recaptcha/`
+**Used by**: `/contact` and `/about` POST handlers (`PageController::contact()`, `AboutController::contact()`), via `app/helpers/recaptcha.php`
+
+**Risk**: Loads `https://www.google.com/recaptcha/api.js` (and associated `gstatic.com`/`google.com` resources) on `/contact` and `/about` — the first off-domain script on public pages. If Google's reCAPTCHA service is unavailable or changes its API, server-side verification fails open (messages are still saved, score check is skipped), so the contact form keeps working but spam protection temporarily degrades to the honeypot/time-trap layer only.
+
+**Self-hosting alternative**: Honeypot + time-trap fields (already implemented as a first layer, zero off-domain calls) provide baseline protection without reCAPTCHA. If reCAPTCHA is removed entirely, `recaptcha_verify()` can be left configured-but-unused (returns `not-configured` → flagged-not-rejected) or the score-check branch removed from both controllers.
+
+---
+
 ### Tiptap Rich Text Editor — `esm.sh`
 
 **CDN**: `https://esm.sh/`  

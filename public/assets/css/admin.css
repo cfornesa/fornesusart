@@ -203,11 +203,7 @@
 
 /* ─── Admin Main ────────────────────────────────────────────────────────── */
 
-.admin-main { padding: 2.5rem 2rem 5rem; max-width: 1000px; }
-
-.admin-main-wide {
-    max-width: 1280px;
-}
+.admin-main { padding: 2.5rem 2rem 5rem; max-width: 100%; }
 
 .admin-section { display: flex; flex-direction: column; gap: 1.8rem; }
 
@@ -906,6 +902,40 @@ tr.drag-over td { border-top: 2px solid var(--amber); }
     min-height: 1em;
 }
 
+/* ─── Messages ──────────────────────────────────────────────────────────── */
+
+tr.is-unread td {
+    font-weight: 600;
+}
+
+.msg-toggle-btn,
+button.msg-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.2rem;
+    min-height: 2.2rem;
+    padding: 0.3rem;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--mid);
+    opacity: 0.55;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: opacity 0.15s, border-color 0.15s, color 0.15s, background 0.15s;
+}
+.msg-toggle-btn:hover,
+button.msg-toggle-btn:hover {
+    opacity: 1;
+    border-color: rgba(200, 155, 60, 0.2);
+    background: rgba(200, 155, 60, 0.05);
+}
+.msg-toggle-btn.active,
+button.msg-toggle-btn.active {
+    opacity: 1;
+    color: var(--amber);
+}
+
 /* ─── Login ─────────────────────────────────────────────────────────────── */
 
 .admin-login-body {
@@ -1378,4 +1408,199 @@ button.media-copy-btn {
     .admin-logout {
         margin-left: 0;
     }
+}
+
+/* ─── Custom Multiselect ────────────────────────────────────────────────── */
+
+.multiselect-control {
+    position: relative;
+    background: #0d0d0d;
+    border: 1px solid var(--amber-border);
+    transition: border-color 0.15s;
+    width: 100%;
+    cursor: text;
+}
+
+.multiselect-control.focus {
+    border-color: var(--amber);
+}
+
+.multiselect-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    min-height: 2.2rem;
+}
+
+.multiselect-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.multiselect-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(200, 155, 60, 0.08);
+    border: 1px solid var(--amber-border);
+    color: var(--amber);
+    padding: 0.15rem 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    user-select: none;
+}
+
+.multiselect-tag-remove {
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    opacity: 0.5;
+    transition: opacity 0.15s, color 0.15s;
+    background: transparent;
+    border: none;
+    color: var(--amber);
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.multiselect-tag-remove:hover {
+    opacity: 1;
+    color: #fff;
+}
+
+.multiselect-search {
+    background: transparent !important;
+    border: none !important;
+    color: var(--parchment) !important;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    padding: 0 !important;
+    outline: none !important;
+    flex: 1;
+    min-width: 120px;
+    height: 1.4rem;
+}
+
+.multiselect-dropdown {
+    position: absolute;
+    top: 100%;
+    left: -1px;
+    right: -1px;
+    background: #0d0d0d;
+    border: 1px solid var(--amber);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.multiselect-option {
+    padding: 0.5rem 0.7rem;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: var(--parchment);
+    transition: background 0.15s, color 0.15s;
+}
+
+.multiselect-option:hover {
+    background: rgba(200, 155, 60, 0.1);
+    color: var(--amber);
+}
+
+.multiselect-option[data-selected="true"] {
+    opacity: 0.35;
+    background: rgba(200, 155, 60, 0.03);
+    cursor: not-allowed;
+}
+
+.multiselect-option-add {
+    padding: 0.5rem 0.7rem;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: bold;
+    color: var(--amber);
+    border-top: 1px solid var(--amber-border);
+    background: rgba(200, 155, 60, 0.04);
+    transition: background 0.15s, color 0.15s;
+}
+
+.multiselect-option-add:hover {
+    background: rgba(200, 155, 60, 0.12);
+}
+
+/* ─── Inline Create Dialog ───────────────────────────────────────────────── */
+
+dialog.inline-create-dialog {
+    background: #0d0d0d;
+    border: 1px solid var(--amber);
+    color: var(--parchment);
+    max-width: 450px;
+    width: 90%;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85);
+    outline: none;
+}
+
+dialog.inline-create-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.inline-create-dialog .dialog-header h2 {
+    font-family: var(--font-headings);
+    font-size: 1.35rem;
+    color: var(--amber);
+    margin-top: 0;
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+}
+
+.inline-create-dialog .dialog-body p {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    opacity: 0.85;
+}
+
+.inline-create-dialog .dialog-body p span {
+    font-weight: bold;
+    color: var(--amber);
+}
+
+.inline-create-dialog .dialog-body .form-row {
+    margin-bottom: 1.5rem;
+}
+
+.inline-create-dialog .dialog-body .form-row input {
+    background: #000;
+    border: 1px solid var(--amber-border);
+    color: var(--parchment);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    padding: 0.6rem 0.8rem;
+    outline: none;
+    width: 100%;
+}
+
+.inline-create-dialog .dialog-body .form-row input:focus {
+    border-color: var(--amber);
+}
+
+.inline-create-dialog .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
 }

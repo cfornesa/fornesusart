@@ -16,6 +16,7 @@ class PageController
         $sections = PageSection::allForPage((int) $page['id']);
         $contactSent = $_GET['sent'] ?? false;
         $contactError = null;
+        $recaptchaSiteKey = $page['template'] === 'contact' ? recaptcha_site_key() : null;
         require dirname(__DIR__) . '/views/page.php';
     }
 
@@ -27,22 +28,31 @@ class PageController
             return;
         }
 
+        if (spam_honeypot_tripped($_POST) || spam_timetrap_tripped($_POST)) {
+            header('Location: /contact?sent=1');
+            exit;
+        }
+
         $name    = trim($_POST['name'] ?? '');
         $email   = trim($_POST['email'] ?? '');
         $message = trim($_POST['message'] ?? '');
 
         if (!$name || !$email || !$message || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $sections     = PageSection::allForPage((int) $page['id']);
-            $contactSent  = false;
-            $contactError = 'Please fill all fields with a valid email.';
+            $sections         = PageSection::allForPage((int) $page['id']);
+            $contactSent      = false;
+            $contactError     = 'Please fill all fields with a valid email.';
+            $recaptchaSiteKey = recaptcha_site_key();
             require dirname(__DIR__) . '/views/page.php';
             return;
         }
 
+        $verification = recaptcha_verify((string) ($_POST['g-recaptcha-response'] ?? ''), $_SERVER['REMOTE_ADDR'] ?? null);
+        $isFlagged    = $verification['score'] < recaptcha_score_threshold() ? 1 : 0;
+
         $stmt = db()->prepare(
-            'INSERT INTO contact_messages (name, email, message) VALUES (?, ?, ?)'
+            'INSERT INTO contact_messages (name, email, message, is_flagged) VALUES (?, ?, ?, ?)'
         );
-        $stmt->execute([$name, $email, $message]);
+        $stmt->execute([$name, $email, $message, $isFlagged]);
 
         header('Location: /contact?sent=1');
         exit;

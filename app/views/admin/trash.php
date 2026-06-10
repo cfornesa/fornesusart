@@ -7,6 +7,7 @@ $tabs = [
     'categories' => ['label' => 'Categories', 'items' => $categories],
     'exhibits'   => ['label' => 'Exhibits',   'items' => $exhibits],
     'media'      => ['label' => 'Media',       'items' => $mediaFiles],
+    'messages'   => ['label' => 'Messages',   'items' => $messages],
 ];
 
 ob_start();
@@ -34,6 +35,7 @@ ob_start();
         'categories' => 'category',
         'exhibits'   => 'exhibit',
         'media'      => 'media',
+        'messages'   => 'message',
         default      => 'artwork',
     };
     ?>
@@ -61,6 +63,9 @@ ob_start();
                                 <?php if ($item['year']): ?>
                                     <span class="admin-hint"> — <?= htmlspecialchars($item['year']) ?></span>
                                 <?php endif ?>
+                            <?php elseif ($tab === 'messages'): ?>
+                                <?= htmlspecialchars($item['name']) ?>
+                                <span class="admin-hint"> — <?= htmlspecialchars(mb_strimwidth($item['message'], 0, 80, '…')) ?></span>
                             <?php else: ?>
                                 <?= htmlspecialchars($item['name']) ?>
                             <?php endif ?>

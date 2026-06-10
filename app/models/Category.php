@@ -28,7 +28,11 @@ class Category
     public static function artworks(int $id): array
     {
         $stmt = db()->prepare(
-            'SELECT * FROM artworks WHERE category_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC'
+            'SELECT a.*
+             FROM artwork_categories ac
+             JOIN artworks a ON a.id = ac.artwork_id AND a.deleted_at IS NULL
+             WHERE ac.category_id = ?
+             ORDER BY a.sort_order ASC, a.id ASC'
         );
         $stmt->execute([$id]);
         return $stmt->fetchAll();

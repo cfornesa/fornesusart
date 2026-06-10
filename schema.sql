@@ -58,6 +58,14 @@ CREATE TABLE exhibits (
     deleted_at      TIMESTAMP NULL DEFAULT NULL
 );
 
+CREATE TABLE artwork_categories (
+    artwork_id  INT NOT NULL,
+    category_id INT NOT NULL,
+    PRIMARY KEY (artwork_id, category_id),
+    FOREIGN KEY (artwork_id)  REFERENCES artworks(id)   ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
 CREATE TABLE exhibit_artworks (
     exhibit_id  INT NOT NULL,
     artwork_id  INT NOT NULL,
@@ -124,7 +132,12 @@ CREATE TABLE contact_messages (
     name        VARCHAR(255) NOT NULL,
     email       VARCHAR(255) NOT NULL,
     message     TEXT NOT NULL,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_read     TINYINT(1) NOT NULL DEFAULT 0,
+    is_flagged  TINYINT(1) NOT NULL DEFAULT 0,
+    is_pinned   TINYINT(1) NOT NULL DEFAULT 0,
+    sort_order  INT NOT NULL DEFAULT 0,
+    deleted_at  TIMESTAMP NULL DEFAULT NULL
 );
 
 CREATE TABLE media_files (
