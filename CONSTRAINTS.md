@@ -15,13 +15,13 @@
      file at project root the first time any constraint is stated,
      even if AGENTS.md is read-only. -->
 
-CONSTRAINT: Artworks must support three piece input types — image file upload, image URL, and iframe embed HTML — all stored in a single artworks table with a piece_type discriminator column. Never collapse these into fewer types.
+CONSTRAINT: Artworks must support mixed-media ordered slides using `artwork_media_items`, while legacy `artworks.piece_type` / `piece_value` remain in place through the migration release for fallback compatibility.
 SCOPE: artworks schema, admin artwork form, gallery and work detail rendering
-SET: 2026-06-04
+SET: 2026-06-09
 
-CONSTRAINT: Admin authentication is single-password session only. No user accounts table. Password stored as bcrypt hash in .env only.
+CONSTRAINT: Admin authentication uses provider-backed admin identities via GitHub and Google OAuth only. No public user accounts table is introduced by this change.
 SCOPE: all /admin/* routes
-SET: 2026-06-04
+SET: 2026-06-09
 
 CONSTRAINT: Uploaded files stored in public/uploads/ with .htaccess blocking PHP execution in that directory. MIME validated by magic bytes, not filename extension or Content-Type header.
 SCOPE: file upload handling (app/helpers/upload.php)

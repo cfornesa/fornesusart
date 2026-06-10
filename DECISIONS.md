@@ -30,6 +30,29 @@ options regardless of session context. -->
 - [x] 2026-06-04 Claude Code. Google Fonts CDN dependency disclosed and accepted; documented in `docs/dependencies.md`
 - [x] 2026-06-05 Codex. Public header overflow still needs a live browser verification pass at intermediate and narrow widths to confirm the hamburger never opens empty and `Fornesus Art` stays on one line until all inline nav links have collapsed.
 
+## Phase 7 — Codex (2026-06-09)
+
+### Auth and Artwork Constraint Changes
+- Admin auth constraint intentionally lifted from single password-in-`.env` to provider-backed admin identities using GitHub and Google OAuth.
+- Artwork piece storage constraint intentionally lifted from single-table `artworks.piece_type`/`piece_value` only to a dedicated ordered `artwork_media_items` table, while keeping legacy fields during the migration release for fallback compatibility.
+
+### Admin OAuth Decisions
+- `/admin/login` is now a provider-only sign-in screen. Approved access is bootstrapped from `.env` allowlists and persisted in `admin_identities`.
+- Admin session state is identity-based (`admin_identity_id` plus provider metadata), replacing the prior boolean password-authenticated session flag.
+- GitHub and Google are accepted off-domain auth dependencies for admin access and are documented in `docs/dependencies.md`.
+- OAuth configuration was simplified so normal environments require only provider client credentials plus the admin allowlists. Provider endpoint override env vars were removed from the supported setup after proving too error-prone in local use.
+- Localhost OAuth failures now surface a concrete callback/detail message on the login screen in addition to the generic sign-in error, so token/profile failures can be debugged without code edits.
+
+### Mixed-Media Artwork Decisions
+- Public artwork pages now render from ordered `artwork_media_items` first, with legacy `piece_type` / `piece_value` retained temporarily as fallback during the migration release.
+- `artworks.thumbnail_*` remains unchanged and continues to drive cards, previews, and SEO/social images.
+- Existing legacy artworks are backfilled to one initial carousel slide so public `/work/[slug]` URLs continue to work without changing route structure.
+
+### Media Storage Decisions
+- Short videos are intentionally supported in database-backed blob storage, but uploads are capped to 25 MB and restricted to `video/mp4`, `video/webm`, and `video/quicktime`.
+- `/media/[id]` is the canonical binary route for image/video assets; `/image/[id]` remains in place as the image-only compatibility route.
+- Video responses on `/media/[id]` support HTTP range requests so browser seeking works against DB-backed media.
+
 ## Phase 6 — Codex (2026-06-05)
 
 ### Investigation Notes

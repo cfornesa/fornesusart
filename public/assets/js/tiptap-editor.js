@@ -850,6 +850,7 @@ function initTiptap(textarea) {
 
 let _pickerCallback = null
 let _libraryMode    = false
+let _pickerOptions  = { mode: 'image' }
 
 function initMediaPicker() {
   const dialog    = document.getElementById('media-picker-modal')
@@ -873,13 +874,16 @@ function initMediaPicker() {
   const fileName  = document.getElementById('mp-file-name')
   const fileSize  = document.getElementById('mp-file-size')
   const fileType  = document.getElementById('mp-file-type')
+  const uploadHint = document.getElementById('mp-upload-hint')
 
   const urlInput  = document.getElementById('mp-import-url')
   const importBtn = dialog.querySelector('.media-picker-import-btn')
   const importSt  = document.getElementById('mp-import-status')
 
   let selectedUrl = null
+  let selectedAsset = null
   let currentTab  = 'select'
+  let currentMode = 'image'
 
   function switchTab(tabName) {
     currentTab = tabName
@@ -892,28 +896,92 @@ function initMediaPicker() {
 
   tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)))
 
+  function pickerModeConfig() {
+    if (currentMode === 'video') {
+      return {
+        accept: 'video/mp4,video/webm,video/quicktime',
+        types: ['video/mp4', 'video/webm', 'video/quicktime'],
+        limit: 25 * 1024 * 1024,
+        hint: 'MP4 · WebM · QuickTime · max 25 MB',
+        empty: 'No videos yet. Use Upload to add one.',
+      }
+    }
+
+    if (currentMode === 'media') {
+      return {
+        accept: 'image/*,video/mp4,video/webm,video/quicktime',
+        types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'video/mp4', 'video/webm', 'video/quicktime'],
+        limit: 25 * 1024 * 1024,
+        hint: 'Images max 8 MB · videos max 25 MB',
+        empty: 'No media yet. Use Upload or Import to add some.',
+      }
+    }
+
+    return {
+      accept: 'image/*',
+      types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'],
+      limit: 8 * 1024 * 1024,
+      hint: 'JPEG · PNG · GIF · WebP · AVIF · max 8 MB',
+      empty: 'No images yet. Use Upload or Import to add some.',
+    }
+  }
+
+  function renderGridItem(f) {
+    const url = f.kind === 'image' ? (f.legacy_url || `/image/${f.id}`) : `/media/${f.id}`
+    const item = document.createElement('div')
+    item.className = 'media-picker-item'
+    item.dataset.url = url
+    item.dataset.id = String(f.id)
+    item.dataset.kind = f.kind
+    item.dataset.mime = f.mime_type || ''
+
+    const media = f.kind === 'video'
+      ? document.createElement('video')
+      : document.createElement('img')
+
+    media.src = f.kind === 'video' ? `/media/${f.id}` : (f.legacy_url || `/image/${f.id}`)
+    media.loading = 'lazy'
+    media.muted = true
+    media.preload = 'metadata'
+    media.alt = `Media ${f.id}`
+    item.appendChild(media)
+
+    item.addEventListener('click', () => {
+      dialog.querySelectorAll('.media-picker-item').forEach(i => i.classList.remove('selected'))
+      item.classList.add('selected')
+      selectedUrl = url
+      selectedAsset = f
+      selectBtn.disabled = false
+      if (altRow && !_libraryMode && currentTab === 'select' && f.kind === 'image') {
+        altRow.hidden = false
+        altInput?.focus()
+      } else if (altRow) {
+        altRow.hidden = true
+      }
+    })
+    item.addEventListener('dblclick', () => { if (!_libraryMode) confirmSelection() })
+    return item
+  }
+
   async function loadGrid(preselectUrl = null) {
-    grid.innerHTML = ''; selectedUrl = null; selectBtn.disabled = true
+    grid.innerHTML = ''; selectedUrl = null; selectedAsset = null; selectBtn.disabled = true
     if (altRow) altRow.hidden = true
     try {
       const res = await fetch('/admin/media/library')
       const files = await res.json()
-      if (!files.length) { grid.innerHTML = '<p class="media-picker-empty">No images yet. Use Upload or Import to add some.</p>'; return }
-      files.forEach(f => {
-        const url  = `/image/${f.id}`
-        const item = document.createElement('div'); item.className = 'media-picker-item'; item.dataset.url = url
-        const img  = document.createElement('img'); img.src = url; img.alt = `Media ${f.id}`; img.loading = 'lazy'
-        item.appendChild(img)
-        item.addEventListener('click', () => {
-          dialog.querySelectorAll('.media-picker-item').forEach(i => i.classList.remove('selected'))
-          item.classList.add('selected'); selectedUrl = url; selectBtn.disabled = false
-          if (altRow && !_libraryMode && currentTab === 'select') { altRow.hidden = false; altInput?.focus() }
-        })
-        item.addEventListener('dblclick', () => { if (!_libraryMode) confirmSelection() })
+      const filtered = files.filter(f => {
+        if (currentMode === 'video') return f.kind === 'video'
+        if (currentMode === 'media') return f.kind === 'image' || f.kind === 'video'
+        return f.kind === 'image'
+      })
+      if (!filtered.length) { grid.innerHTML = `<p class="media-picker-empty">${pickerModeConfig().empty}</p>`; return }
+      filtered.forEach(f => {
+        const item = renderGridItem(f)
         grid.appendChild(item)
+        const url = f.kind === 'image' ? (f.legacy_url || `/image/${f.id}`) : `/media/${f.id}`
         if (preselectUrl && url === preselectUrl) {
-          item.classList.add('selected'); selectedUrl = url; selectBtn.disabled = false
-          if (altRow && !_libraryMode && currentTab === 'select') altRow.hidden = false
+          item.classList.add('selected'); selectedUrl = url; selectedAsset = f; selectBtn.disabled = false
+          if (altRow && !_libraryMode && currentTab === 'select' && f.kind === 'image') altRow.hidden = false
         }
       })
     } catch { grid.innerHTML = '<p class="media-picker-empty">Failed to load media library.</p>' }
@@ -921,25 +989,34 @@ function initMediaPicker() {
 
   function confirmSelection() {
     if (!selectedUrl || !_pickerCallback) return
-    _pickerCallback({ url: selectedUrl, alt: altInput?.value.trim() || '' })
+    _pickerCallback({
+      url: selectedUrl,
+      alt: altInput?.value.trim() || '',
+      id: selectedAsset?.id || null,
+      kind: selectedAsset?.kind || currentMode,
+      mime_type: selectedAsset?.mime_type || selectedAsset?.mime || '',
+      legacy_url: selectedAsset?.legacy_url || (selectedAsset?.kind === 'image' ? selectedUrl : null),
+    })
     _pickerCallback = null; dialog.close()
   }
 
   selectBtn.addEventListener('click', confirmSelection)
 
   // Upload
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
   function formatBytes(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b/1024).toFixed(1) + ' KB' : (b/1048576).toFixed(2) + ' MB' }
   function setUploadStatus(msg, err = false) { if (uploadSt) { uploadSt.textContent = msg; uploadSt.className = `media-picker-status ${err ? 'err' : 'ok'}` } }
   function showFileInfo(file) {
-    const over = file.size > 8388608, bad = !ALLOWED_TYPES.includes(file.type)
+    const config = pickerModeConfig()
+    const over = file.size > config.limit
+    const bad = !config.types.includes(file.type)
     if (fileName) fileName.textContent = file.name
     if (fileSize) { fileSize.textContent = formatBytes(file.size); fileSize.classList.toggle('size-over', over) }
     if (fileType) fileType.textContent = file.type || 'unknown'
     if (fileInfo) { fileInfo.hidden = false; fileInfo.classList.toggle('is-error', over || bad) }
-    if (over || bad) { setUploadStatus(over ? 'File exceeds 8 MB.' : `Unsupported type "${file.type}".`, true); if (uploadBtn) uploadBtn.disabled = true }
+    if (over || bad) { setUploadStatus(over ? 'File exceeds the current size limit.' : `Unsupported type "${file.type}".`, true); if (uploadBtn) uploadBtn.disabled = true }
     else { setUploadStatus(''); if (uploadBtn) uploadBtn.disabled = false }
-    if (fileThumb) { const r = new FileReader(); r.onload = e => { fileThumb.src = e.target.result }; r.readAsDataURL(file) }
+    if (fileThumb && file.type.startsWith('image/')) { const r = new FileReader(); r.onload = e => { fileThumb.src = e.target.result }; r.readAsDataURL(file) }
+    if (fileThumb && !file.type.startsWith('image/')) fileThumb.src = ''
   }
   function clearFileInfo() {
     if (fileInfo) { fileInfo.hidden = true; fileInfo.classList.remove('is-error') }
@@ -948,7 +1025,7 @@ function initMediaPicker() {
     setUploadStatus('')
   }
 
-  if (dropzone) {
+    if (dropzone) {
     dropzone.addEventListener('click', () => fileInput.click())
     dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click() } })
     dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over') })
@@ -960,7 +1037,8 @@ function initMediaPicker() {
   uploadBtn?.addEventListener('click', async () => {
     if (!fileInput?.files.length) { setUploadStatus('Choose a file first.', true); return }
     const file = fileInput.files[0]
-    if (file.size > 8388608) { setUploadStatus('File exceeds 8 MB.', true); return }
+    const config = pickerModeConfig()
+    if (file.size > config.limit) { setUploadStatus('File exceeds the current limit.', true); return }
     uploadBtn.disabled = true; setUploadStatus('Uploading…')
     const fd = new FormData(); fd.append('media_file', file)
     try {
@@ -999,8 +1077,19 @@ function initMediaPicker() {
     if (_libraryMode) window.location.reload()
   })
 
-  window.openMediaPicker = (callback = null, defaultTab = 'select') => {
-    _pickerCallback = callback; _libraryMode = callback === null
+  window.openMediaPicker = (callback = null, defaultTab = 'select', opts = {}) => {
+    _pickerCallback = callback; _libraryMode = callback === null; _pickerOptions = { mode: opts.mode || 'image' }
+    currentMode = _pickerOptions.mode
+    const config = pickerModeConfig()
+    if (fileInput) fileInput.setAttribute('accept', config.accept)
+    if (uploadHint) uploadHint.textContent = config.hint
+    tabs.forEach(tab => {
+      if (tab.dataset.tab === 'import') {
+        const hideImport = currentMode === 'video'
+        tab.hidden = hideImport
+        if (hideImport && defaultTab === 'import') defaultTab = 'select'
+      }
+    })
     setUploadStatus(''); setImportStatus('')
     if (altRow)  altRow.hidden = true
     if (altInput) altInput.value = ''
@@ -1022,6 +1111,7 @@ function initStandalonePickers() {
       const radioName = btn.dataset.pickerRadio
       const radioVal  = btn.dataset.pickerRadioValue || 'link'
       const previewId = btn.dataset.pickerPreview
+      const pickerMode = btn.dataset.pickerMode || 'image'
 
       window.openMediaPicker(result => {
         const url = typeof result === 'string' ? result : result.url
@@ -1038,7 +1128,7 @@ function initStandalonePickers() {
           const radio = document.querySelector(`input[name="${radioName}"][value="${radioVal}"]`)
           if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })) }
         }
-      }, 'select')
+      }, 'select', { mode: pickerMode })
     })
   })
 

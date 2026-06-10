@@ -19,7 +19,7 @@ ob_start();
                     <th>Title</th>
                     <th>Year</th>
                     <th>Category</th>
-                    <th>Piece Type</th>
+                    <th>Slides</th>
                     <th></th>
                 </tr>
             </thead>
@@ -34,7 +34,7 @@ ob_start();
                         </td>
                         <td><?= htmlspecialchars($w['year'] ?? '') ?></td>
                         <td><?= htmlspecialchars($w['category_name'] ?? '—') ?></td>
-                        <td><?= htmlspecialchars($w['piece_type']) ?></td>
+                        <td><?= count($w['media_items'] ?? Artwork::resolvedMediaItems($w)) ?></td>
                         <td class="admin-actions">
                             <a href="/admin/artworks/<?= $w['id'] ?>/edit">Edit</a>
                             <form method="POST" action="/admin/artworks/<?= $w['id'] ?>/delete"

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-const ALLOWED_MIME = [
+const ALLOWED_IMAGE_MIME = [
     'image/jpeg' => 'jpg',
     'image/png'  => 'png',
     'image/gif'  => 'gif',
@@ -10,11 +10,58 @@ const ALLOWED_MIME = [
     'image/avif' => 'avif',
 ];
 
-function upload_image(array $file, string $subfolder = ''): string
+const ALLOWED_VIDEO_MIME = [
+    'video/mp4'       => 'mp4',
+    'video/webm'      => 'webm',
+    'video/quicktime' => 'mov',
+];
+
+function upload_parse_size_to_bytes(string $value): int
+{
+    $value = trim($value);
+    if ($value === '') {
+        return 0;
+    }
+
+    $unit = strtolower(substr($value, -1));
+    $number = (float) $value;
+
+    return match ($unit) {
+        'g' => (int) round($number * 1024 * 1024 * 1024),
+        'm' => (int) round($number * 1024 * 1024),
+        'k' => (int) round($number * 1024),
+        default => (int) round((float) $value),
+    };
+}
+
+function upload_ini_limit_message(): string
+{
+    $uploadMax = ini_get('upload_max_filesize') ?: 'unknown';
+    $postMax = ini_get('post_max_size') ?: 'unknown';
+    return 'Server limits are upload_max_filesize=' . $uploadMax . ' and post_max_size=' . $postMax . '.';
+}
+
+function upload_resolve_mime(array $file, string $label = 'File'): string
+{
+    $tmpName = (string) ($file['tmp_name'] ?? '');
+    if ($tmpName === '' || !is_file($tmpName)) {
+        throw new RuntimeException($label . ' upload could not be inspected. ' . upload_ini_limit_message());
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file($tmpName);
+    if (!is_string($mime) || $mime === '') {
+        throw new RuntimeException($label . ' type could not be detected.');
+    }
+
+    return $mime;
+}
+
+function upload_media(array $file, array $allowedMimeMap, int $maxBytes, string $label = 'File'): array
 {
     if ($file['error'] !== UPLOAD_ERR_OK) {
         $messages = [
-            UPLOAD_ERR_INI_SIZE   => 'File exceeds the server upload size limit.',
+            UPLOAD_ERR_INI_SIZE   => 'File exceeds the server upload size limit. ' . upload_ini_limit_message(),
             UPLOAD_ERR_FORM_SIZE  => 'File exceeds the form upload size limit.',
             UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded.',
             UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
@@ -25,26 +72,61 @@ function upload_image(array $file, string $subfolder = ''): string
         throw new RuntimeException($messages[$file['error']] ?? 'Upload error: ' . $file['error']);
     }
 
-    // Validate by magic bytes, not extension or Content-Type header
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime  = $finfo->file($file['tmp_name']);
+    $mime = upload_resolve_mime($file, $label);
 
-    if (!isset(ALLOWED_MIME[$mime])) {
-        throw new RuntimeException('File type not permitted.');
+    if (!isset($allowedMimeMap[$mime])) {
+        throw new RuntimeException($label . ' type not permitted.');
     }
 
-    $blob = file_get_contents($file['tmp_name']);
+    $blob = file_get_contents((string) $file['tmp_name']);
     if ($blob === false) {
         throw new RuntimeException('Could not read uploaded file.');
     }
 
-    // Attempt to raise packet limit for large blobs; MariaDB 11+ ignores SESSION-level SET
-    try { db()->exec('SET SESSION max_allowed_packet = 67108864'); } catch (\Exception) {}
-
-    if (class_exists('MediaFile')) {
-        $id = MediaFile::create($blob, $mime);
-        return '/image/' . $id;
+    if (mb_strlen($blob, '8bit') > $maxBytes) {
+        throw new RuntimeException($label . ' exceeds the upload limit.');
     }
 
-    throw new RuntimeException('MediaFile class not available.');
+    try {
+        db()->exec('SET SESSION max_allowed_packet = 67108864');
+    } catch (\Exception) {
+    }
+
+    if (!class_exists('MediaFile')) {
+        throw new RuntimeException('MediaFile class not available.');
+    }
+
+    $id = MediaFile::create($blob, $mime, basename((string) ($file['name'] ?? '')));
+
+    return [
+        'id' => $id,
+        'mime_type' => $mime,
+        'url' => '/media/' . $id,
+        'legacy_url' => str_starts_with($mime, 'image/') ? '/image/' . $id : null,
+    ];
+}
+
+function upload_image(array $file, string $subfolder = ''): string
+{
+    $asset = upload_media($file, ALLOWED_IMAGE_MIME, 8 * 1024 * 1024, 'Image');
+    return $asset['legacy_url'] ?? $asset['url'];
+}
+
+function upload_video(array $file): array
+{
+    return upload_media($file, ALLOWED_VIDEO_MIME, 25 * 1024 * 1024, 'Video');
+}
+
+function upload_media_auto(array $file): array
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return upload_media($file, ALLOWED_IMAGE_MIME, 8 * 1024 * 1024, 'File');
+    }
+
+    $mime = upload_resolve_mime($file);
+    if (isset(ALLOWED_VIDEO_MIME[$mime])) {
+        return upload_media($file, ALLOWED_VIDEO_MIME, 25 * 1024 * 1024, 'Video');
+    }
+
+    return upload_media($file, ALLOWED_IMAGE_MIME, 8 * 1024 * 1024, 'Image');
 }

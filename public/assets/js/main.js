@@ -250,3 +250,273 @@ document.querySelectorAll('.toggle-group').forEach(group => {
     radios.forEach(r => r.addEventListener('change', syncPanels));
     syncPanels();
 });
+
+// Admin artwork form: ordered mixed-media carousel builder
+(function () {
+    const builder = document.querySelector('[data-artwork-media-builder]');
+    if (!builder) return;
+
+    const list = builder.querySelector('[data-slide-list]');
+    const templates = {
+        image: document.getElementById('artwork-slide-template-image'),
+        video: document.getElementById('artwork-slide-template-video'),
+        iframe: document.getElementById('artwork-slide-template-iframe'),
+    };
+
+    function assetUrlFor(kind, asset) {
+        if (!asset) return '';
+        if (kind === 'image') return asset.legacy_url || asset.url || '';
+        return asset.url || '';
+    }
+
+    function hydratePreview(card, kind, assetUrl, posterUrl = '') {
+        const preview = card.querySelector('[data-slide-preview]');
+        if (!preview) return;
+
+        preview.innerHTML = '';
+        if (kind === 'image' && assetUrl) {
+            const img = document.createElement('img');
+            img.src = assetUrl;
+            img.alt = '';
+            preview.appendChild(img);
+            return;
+        }
+
+        if (kind === 'video' && assetUrl) {
+            const video = document.createElement('video');
+            video.src = assetUrl;
+            if (posterUrl) video.poster = posterUrl;
+            video.muted = true;
+            video.preload = 'metadata';
+            preview.appendChild(video);
+            return;
+        }
+
+        const empty = document.createElement('div');
+        empty.className = kind === 'iframe' ? 'artwork-slide-preview-embed' : 'artwork-slide-preview-empty';
+        empty.textContent = kind === 'iframe' ? 'Iframe embed slide' : `No ${kind} selected yet`;
+        preview.appendChild(empty);
+    }
+
+    function setActiveSlide(card) {
+        list.querySelectorAll('[data-slide-item]').forEach(c => c.classList.add('is-collapsed'));
+        card.classList.remove('is-collapsed');
+    }
+
+    function renumber() {
+        [...list.querySelectorAll('[data-slide-item]')].forEach((card, index) => {
+            card.querySelectorAll('input[name], textarea[name]').forEach(field => {
+                if (!field.name) return;
+                field.name = field.name.replace(/\[\d+\]/, `[${index}]`).replace(/\[__INDEX__\]/, `[${index}]`);
+            });
+        });
+    }
+
+    function bindCard(card) {
+        const kind = card.dataset.kind;
+        const removeBtn = card.querySelector('[data-remove-slide]');
+        const assetBtn = card.querySelector('[data-slide-pick-asset]');
+        const posterBtn = card.querySelector('[data-slide-pick-poster]');
+        const assetUrlInput = card.querySelector('[data-slide-asset-url]');
+        const posterUrlInput = card.querySelector('[data-slide-poster-url]');
+        const mediaIdField = card.querySelector('[data-field="media_file_id"]');
+        const posterIdField = card.querySelector('[data-field="poster_media_file_id"]');
+
+        card.draggable = true;
+
+        card.querySelector('[data-edit-slide]')?.addEventListener('click', () => setActiveSlide(card));
+
+        removeBtn?.addEventListener('click', () => {
+            card.remove();
+            renumber();
+        });
+
+        assetBtn?.addEventListener('click', () => {
+            if (!window.openMediaPicker) return;
+            window.openMediaPicker(result => {
+                if (!result?.id) return;
+                mediaIdField.value = result.id;
+                assetUrlInput.value = assetUrlFor(kind, result);
+                hydratePreview(card, kind, assetUrlInput.value, posterUrlInput?.value || '');
+            }, 'select', { mode: assetBtn.dataset.pickerMode || kind });
+        });
+
+        posterBtn?.addEventListener('click', () => {
+            if (!window.openMediaPicker) return;
+            window.openMediaPicker(result => {
+                if (!result?.id) return;
+                posterIdField.value = result.id;
+                posterUrlInput.value = result.legacy_url || result.url || '';
+                hydratePreview(card, 'video', assetUrlInput?.value || '', posterUrlInput.value);
+            }, 'select', { mode: 'image' });
+        });
+    }
+
+    let dragging = null;
+    list.addEventListener('dragstart', event => {
+        const card = event.target.closest('[data-slide-item]');
+        if (!card) return;
+        dragging = card;
+        card.classList.add('drag-active');
+    });
+
+    list.addEventListener('dragend', () => {
+        if (!dragging) return;
+        dragging.classList.remove('drag-active');
+        dragging = null;
+        renumber();
+    });
+
+    list.addEventListener('dragover', event => {
+        event.preventDefault();
+        const over = event.target.closest('[data-slide-item]');
+        if (!dragging || !over || over === dragging) return;
+        const rect = over.getBoundingClientRect();
+        const after = event.clientY > rect.top + rect.height / 2;
+        list.insertBefore(dragging, after ? over.nextSibling : over);
+    });
+
+    function addSlide(kind) {
+        const template = templates[kind];
+        if (!template) return;
+        const index = list.querySelectorAll('[data-slide-item]').length;
+        const html = template.innerHTML.replaceAll('__INDEX__', String(index));
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        const card = wrap.firstElementChild;
+        list.appendChild(card);
+        bindCard(card);
+        renumber();
+        setActiveSlide(card);
+
+        const assetBtn = card.querySelector('[data-slide-pick-asset]');
+        if (assetBtn && kind !== 'iframe') {
+            assetBtn.click();
+        }
+    }
+
+    builder.querySelectorAll('[data-add-slide]').forEach(btn => {
+        btn.addEventListener('click', () => addSlide(btn.dataset.addSlide));
+    });
+
+    list.querySelectorAll('[data-slide-item]').forEach(bindCard);
+    renumber();
+    const firstSlide = list.querySelector('[data-slide-item]');
+    if (firstSlide) setActiveSlide(firstSlide);
+})();
+
+// Public work page: lazy-loaded artwork carousel
+(function () {
+    const carousel = document.querySelector('[data-artwork-carousel]');
+    if (!carousel) return;
+
+    const slides = [...carousel.querySelectorAll('[data-carousel-slide]')];
+    const prevBtn = carousel.querySelector('[data-carousel-prev]');
+    const nextBtn = carousel.querySelector('[data-carousel-next]');
+    const dots = [...carousel.querySelectorAll('[data-carousel-dot]')];
+    const titleEl = carousel.querySelector('[data-carousel-title]');
+    const captionEl = carousel.querySelector('[data-carousel-caption]');
+    let activeIndex = Math.max(0, slides.findIndex(slide => slide.classList.contains('is-active')));
+    if (activeIndex < 0) activeIndex = 0;
+
+    function teardownSlide(slide) {
+        const kind = slide.dataset.kind;
+        if (kind === 'iframe') {
+            slide.innerHTML = '<div class="work-slide-placeholder"><span>IFRAME loads when activated</span></div>';
+            return;
+        }
+
+        const video = slide.querySelector('video');
+        if (video) {
+            video.pause();
+        }
+    }
+
+    function ensureSlideContent(slide) {
+        const kind = slide.dataset.kind;
+        if (slide.dataset.loaded === 'true' && kind !== 'iframe') return;
+
+        if (kind === 'image') {
+            const img = document.createElement('img');
+            img.className = 'work-image';
+            img.src = slide.dataset.source;
+            img.alt = slide.dataset.alt || '';
+            img.decoding = 'async';
+            slide.innerHTML = '';
+            slide.appendChild(img);
+            slide.dataset.loaded = 'true';
+            return;
+        }
+
+        if (kind === 'video') {
+            const video = document.createElement('video');
+            video.className = 'work-video';
+            video.controls = true;
+            video.preload = 'metadata';
+            video.src = slide.dataset.source;
+            if (slide.dataset.poster) video.poster = slide.dataset.poster;
+            slide.innerHTML = '';
+            slide.appendChild(video);
+            slide.dataset.loaded = 'true';
+            return;
+        }
+
+        if (kind === 'iframe') {
+            const wrap = document.createElement('div');
+            wrap.className = 'work-embed';
+            wrap.innerHTML = slide.dataset.iframeHtml || '';
+            slide.innerHTML = '';
+            slide.appendChild(wrap);
+        }
+    }
+
+    function syncUi() {
+        slides.forEach((slide, index) => {
+            const isActive = index === activeIndex;
+            slide.classList.toggle('is-active', isActive);
+            slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+            if (isActive) ensureSlideContent(slide);
+            else teardownSlide(slide);
+        });
+
+        dots.forEach((dot, index) => {
+            const isActive = index === activeIndex;
+            dot.classList.toggle('is-active', isActive);
+            dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === slides.length - 1;
+
+        if (titleEl) {
+            titleEl.textContent = slides[activeIndex]?.dataset.title || '';
+        }
+
+        if (captionEl) {
+            captionEl.textContent = slides[activeIndex]?.dataset.caption || '';
+        }
+    }
+
+    function goTo(index) {
+        if (index < 0 || index >= slides.length || index === activeIndex) return;
+        activeIndex = index;
+        syncUi();
+    }
+
+    prevBtn?.addEventListener('click', () => goTo(activeIndex - 1));
+    nextBtn?.addEventListener('click', () => goTo(activeIndex + 1));
+    dots.forEach(dot => dot.addEventListener('click', () => goTo(Number(dot.dataset.index || 0))));
+
+    carousel.addEventListener('keydown', event => {
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            goTo(activeIndex - 1);
+        }
+        if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            goTo(activeIndex + 1);
+        }
+    });
+
+    syncUi();
+})();

@@ -65,7 +65,8 @@ class Artwork
              WHERE a.id = ? AND a.deleted_at IS NULL'
         );
         $stmt->execute([$id]);
-        return $stmt->fetch();
+        $artwork = $stmt->fetch();
+        return $artwork ? self::decorate($artwork) : false;
     }
 
     public static function findBySlug(string $slug): array|false
@@ -77,7 +78,8 @@ class Artwork
              WHERE a.slug = ? AND a.deleted_at IS NULL'
         );
         $stmt->execute([$slug]);
-        return $stmt->fetch();
+        $artwork = $stmt->fetch();
+        return $artwork ? self::decorate($artwork) : false;
     }
 
     public static function trashed(): array
@@ -102,17 +104,21 @@ class Artwork
     {
         $stmt = db()->prepare(
             'INSERT INTO artworks
-                (category_id, title, slug, year, description,
+                (category_id, title, artist_name, slug, year, medium, dimensions, description, placard_notes,
                  thumbnail_type, thumbnail_value,
                  piece_type, piece_value, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $data['category_id'] ?: null,
             $data['title'],
+            $data['artist_name'] ?: null,
             $data['slug'],
             $data['year'] ?: null,
+            $data['medium'] ?: null,
+            $data['dimensions'] ?: null,
             $data['description'] ?: null,
+            $data['placard_notes'] ?: null,
             $data['thumbnail_type'] ?: null,
             $data['thumbnail_value'] ?: null,
             $data['piece_type'],
@@ -126,7 +132,8 @@ class Artwork
     {
         $stmt = db()->prepare(
             'UPDATE artworks SET
-                category_id = ?, title = ?, slug = ?, year = ?, description = ?,
+                category_id = ?, title = ?, artist_name = ?, slug = ?, year = ?, medium = ?, dimensions = ?,
+                description = ?, placard_notes = ?,
                 thumbnail_type = ?, thumbnail_value = ?,
                 piece_type = ?, piece_value = ?, sort_order = ?
              WHERE id = ?'
@@ -134,9 +141,13 @@ class Artwork
         $stmt->execute([
             $data['category_id'] ?: null,
             $data['title'],
+            $data['artist_name'] ?: null,
             $data['slug'],
             $data['year'] ?: null,
+            $data['medium'] ?: null,
+            $data['dimensions'] ?: null,
             $data['description'] ?: null,
+            $data['placard_notes'] ?: null,
             $data['thumbnail_type'] ?: null,
             $data['thumbnail_value'] ?: null,
             $data['piece_type'],
@@ -144,6 +155,76 @@ class Artwork
             $data['sort_order'] ?? 0,
             $id,
         ]);
+    }
+
+    public static function legacyPieceFromMediaItems(array $items): array
+    {
+        if ($items === []) {
+            return ['piece_type' => 'image_link', 'piece_value' => ''];
+        }
+
+        $first = $items[0];
+
+        if (($first['media_kind'] ?? '') === 'iframe') {
+            return [
+                'piece_type' => 'embed',
+                'piece_value' => trim((string) ($first['iframe_html'] ?? '')),
+            ];
+        }
+
+        $sourceUrl = null;
+        $mediaFileId = (int) ($first['media_file_id'] ?? 0);
+        if ($mediaFileId > 0) {
+            $sourceUrl = '/media/' . $mediaFileId;
+            if (($first['media_kind'] ?? '') === 'image') {
+                $sourceUrl = '/image/' . $mediaFileId;
+            }
+        }
+
+        return [
+            'piece_type' => ($first['media_kind'] ?? '') === 'video' ? 'image_link' : 'image_link',
+            'piece_value' => $sourceUrl ?: '',
+        ];
+    }
+
+    public static function resolvedMediaItems(array $artwork): array
+    {
+        $artworkId = (int) ($artwork['id'] ?? 0);
+        $items = $artworkId > 0 ? ArtworkMediaItem::allForArtwork($artworkId) : [];
+
+        if ($items === []) {
+            $legacy = ArtworkMediaItem::buildLegacyItem($artwork);
+            return $legacy ? [ArtworkMediaItem::normalizeForDisplay($legacy)] : [];
+        }
+
+        return array_map(
+            static fn (array $item): array => ArtworkMediaItem::normalizeForDisplay($item),
+            $items
+        );
+    }
+
+    public static function previewImage(array $artwork): ?string
+    {
+        if (!empty($artwork['thumbnail_value'])) {
+            return (string) $artwork['thumbnail_value'];
+        }
+
+        foreach (self::resolvedMediaItems($artwork) as $item) {
+            if (($item['display_kind'] ?? '') === 'image' && !empty($item['source_url'])) {
+                return (string) $item['source_url'];
+            }
+            if (($item['display_kind'] ?? '') === 'video' && !empty($item['poster_url'])) {
+                return (string) $item['poster_url'];
+            }
+        }
+
+        return null;
+    }
+
+    private static function decorate(array $artwork): array
+    {
+        $artwork['media_items'] = self::resolvedMediaItems($artwork);
+        return $artwork;
     }
 
     public static function softDelete(int $id): void
@@ -267,6 +348,11 @@ class Artwork
 
         $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
         return in_array($scheme, ['http', 'https'], true);
+    }
+
+    public static function extractIframeSourcePublic(string $html): ?string
+    {
+        return self::extractIframeSrc($html);
     }
 
     private static function extractIframeSrc(string $html): ?string

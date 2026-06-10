@@ -16,26 +16,29 @@ Registered via `@font-face` in `public/assets/css/style.css`. Preloaded in both 
 
 ---
 
-## CDN Dependencies (admin panel only)
+## Third-Party Service Dependencies
 
-The **public-facing site has no CDN dependencies at all**. The remaining off-domain requests are limited to the admin experience.
+The **public-facing site has no font/CDN dependency at all**. Remaining off-domain dependencies are limited to accepted admin and editor integrations.
 
-### Google Fonts — admin login only
+### GitHub OAuth — admin login
 
-**CDN**: `https://fonts.googleapis.com/` and `https://fonts.gstatic.com/`  
-**Loaded via**: `<link rel="stylesheet">` in `app/views/admin/login.php`
+**Provider**: `https://github.com/` and `https://api.github.com/`  
+**Used by**: `/admin/auth/github/*`
 
-**Fonts loaded**:
+**Risk**: If GitHub changes its OAuth API, rate limits, terms, or availability, GitHub-backed admin login stops working for GitHub identities and those admins cannot sign in through GitHub until the integration is updated.
 
-| Typeface | Purpose |
-|---|---|
-| **Cinzel Decorative** | Legacy login display title |
-| **Lora** | Login body/form text |
-| **Courier Prime** | Login button / mono accents |
+**Self-hosting alternative**: First-party password-only admin login.
 
-**Risk**: If Google Fonts is unavailable, the admin login falls back to local/system serif and monospace fonts. Admin authentication still works, but branding and typography shift.
+---
 
-**Self-hosting alternative**: Move the login view to the same self-hosted font stack already used by `app/views/layout.php` and `app/views/admin/layout.php`, then remove the Google Fonts `<link>` tags.
+### Google OAuth — admin login
+
+**Provider**: `https://accounts.google.com/`, `https://oauth2.googleapis.com/`, and `https://openidconnect.googleapis.com/`  
+**Used by**: `/admin/auth/google/*`
+
+**Risk**: If Google changes its OAuth API, rate limits, terms, or availability, Google-backed admin login stops working for Google identities and those admins cannot sign in through Google until the integration is updated.
+
+**Self-hosting alternative**: First-party password-only admin login.
 
 ---
 

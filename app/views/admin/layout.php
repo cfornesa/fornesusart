@@ -29,6 +29,7 @@
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/admin', PHP_URL_PATH) ?: '/admin';
 $bodyClass = trim('admin-body ' . ($bodyClass ?? ''));
 $mainClass = trim('admin-main ' . ($mainClass ?? ''));
+$adminIdentity = admin_identity();
 
 $adminNavItems = [
     '/admin' => 'Dashboard',
@@ -47,6 +48,9 @@ $adminNavItems = [
         <div class="admin-brand">
             <span class="admin-kicker">Administration</span>
             <a href="/admin" class="admin-site-link">Fornesus Archive</a>
+            <?php if ($adminIdentity): ?>
+                <span class="admin-kicker">Signed in as <?= htmlspecialchars($adminIdentity['display_name']) ?> via <?= htmlspecialchars(ucfirst($adminIdentity['provider'])) ?></span>
+            <?php endif ?>
         </div>
         <nav class="admin-nav">
             <?php foreach ($adminNavItems as $href => $label): ?>
@@ -86,9 +90,9 @@ $adminNavItems = [
         <div class="media-picker-panel" id="mp-panel-upload" role="tabpanel" hidden>
             <div class="media-picker-dropzone" id="mp-dropzone" tabindex="0" role="button"
                  aria-label="Click or drag to select an image file">
-                <p class="mp-dropzone-label">Drag an image here or click to choose a file</p>
-                <input type="file" class="media-picker-file-input" accept="image/*">
-                <p class="media-picker-hint">JPEG &middot; PNG &middot; GIF &middot; WebP &middot; AVIF &middot; max 8 MB</p>
+                <p class="mp-dropzone-label">Drag a file here or click to choose one</p>
+                <input type="file" class="media-picker-file-input" accept="image/*,video/mp4,video/webm,video/quicktime">
+                <p class="media-picker-hint" id="mp-upload-hint">JPEG &middot; PNG &middot; GIF &middot; WebP &middot; AVIF &middot; max 8 MB</p>
             </div>
             <!-- File preview shown after selection -->
             <div class="mp-file-info" id="mp-file-info" hidden>
@@ -127,7 +131,7 @@ $adminNavItems = [
 
         <div class="media-picker-footer">
             <button type="button" class="admin-btn admin-btn-ghost media-picker-cancel-btn">Cancel</button>
-            <button type="button" class="admin-btn media-picker-select-btn" disabled>Select Image</button>
+            <button type="button" class="admin-btn media-picker-select-btn" disabled>Select Asset</button>
         </div>
     </dialog>
 

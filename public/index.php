@@ -12,8 +12,11 @@ if (PHP_SAPI === 'cli-server') {
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 require dirname(__DIR__) . '/app/helpers/auth.php';
+require dirname(__DIR__) . '/app/helpers/oauth.php';
 require dirname(__DIR__) . '/app/helpers/seo.php';
 require dirname(__DIR__) . '/app/models/MediaFile.php';
+require dirname(__DIR__) . '/app/models/AdminIdentity.php';
+require dirname(__DIR__) . '/app/models/ArtworkMediaItem.php';
 require dirname(__DIR__) . '/app/helpers/upload.php';
 require dirname(__DIR__) . '/app/helpers/slugify.php';
 require dirname(__DIR__) . '/app/models/Category.php';
@@ -31,6 +34,7 @@ require dirname(__DIR__) . '/app/controllers/CategoriesController.php';
 require dirname(__DIR__) . '/app/controllers/ExhibitController.php';
 require dirname(__DIR__) . '/app/controllers/AdminController.php';
 require dirname(__DIR__) . '/app/controllers/ImageController.php';
+require dirname(__DIR__) . '/app/controllers/MediaController.php';
 
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
@@ -45,6 +49,7 @@ if ($uri !== '/' && str_ends_with($uri, '/')) {
 $routes = [
     // Image serving (blob storage)
     ['GET',  '/image/([0-9]+)',                [ImageController::class,      'serve']],
+    ['GET',  '/media/([0-9]+)',                [MediaController::class,      'serve']],
 
     // Public
     ['GET',  '/',                              [GalleryController::class,    'index']],
@@ -60,7 +65,10 @@ $routes = [
     // Admin auth
     ['GET',  '/admin',                         [AdminController::class, 'dashboard']],
     ['GET',  '/admin/login',                   [AdminController::class, 'loginForm']],
-    ['POST', '/admin/login',                   [AdminController::class, 'loginSubmit']],
+    ['GET',  '/admin/auth/github/start',       [AdminController::class, 'oauthStart']],
+    ['GET',  '/admin/auth/github/callback',    [AdminController::class, 'oauthCallback']],
+    ['GET',  '/admin/auth/google/start',       [AdminController::class, 'oauthStart']],
+    ['GET',  '/admin/auth/google/callback',    [AdminController::class, 'oauthCallback']],
     ['GET',  '/admin/logout',                  [AdminController::class, 'logout']],
 
     // Admin artworks

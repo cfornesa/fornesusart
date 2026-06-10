@@ -13,9 +13,13 @@ CREATE TABLE artworks (
     id               INT AUTO_INCREMENT PRIMARY KEY,
     category_id      INT NULL,
     title            VARCHAR(255) NOT NULL,
+    artist_name      VARCHAR(255) NULL,
     slug             VARCHAR(255) NOT NULL UNIQUE,
     year             VARCHAR(10),
+    medium           VARCHAR(255) NULL,
+    dimensions       VARCHAR(255) NULL,
     description      TEXT,
+    placard_notes    TEXT NULL,
     thumbnail_type   ENUM('upload','link') NULL DEFAULT NULL,
     thumbnail_value  VARCHAR(500)          NULL DEFAULT NULL,
     piece_type       ENUM('image_upload','image_link','embed') NOT NULL,
@@ -24,6 +28,22 @@ CREATE TABLE artworks (
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at       TIMESTAMP NULL DEFAULT NULL,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+CREATE TABLE artwork_media_items (
+    id                   INT AUTO_INCREMENT PRIMARY KEY,
+    artwork_id           INT NOT NULL,
+    media_kind           ENUM('image', 'video', 'iframe') NOT NULL,
+    media_file_id        INT NULL,
+    iframe_html          MEDIUMTEXT NULL,
+    poster_media_file_id INT NULL,
+    alt_text             VARCHAR(250) NULL,
+    title                VARCHAR(255) NULL,
+    caption              VARCHAR(250) NULL,
+    sort_order           INT NOT NULL DEFAULT 0,
+    created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (artwork_id) REFERENCES artworks(id) ON DELETE CASCADE
 );
 
 CREATE TABLE exhibits (
@@ -108,10 +128,26 @@ CREATE TABLE contact_messages (
 );
 
 CREATE TABLE media_files (
-    id         INT AUTO_INCREMENT PRIMARY KEY,
-    data       LONGBLOB NULL,
-    mime_type  VARCHAR(50) NULL,
-    deleted_at TIMESTAMP NULL DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    data          LONGBLOB NULL,
+    mime_type     VARCHAR(50) NULL,
+    byte_size     INT NULL,
+    original_name VARCHAR(255) NULL,
+    deleted_at    TIMESTAMP NULL DEFAULT NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_deleted (deleted_at)
+);
+
+CREATE TABLE admin_identities (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    provider         ENUM('github', 'google') NOT NULL,
+    provider_subject VARCHAR(255) NOT NULL,
+    email            VARCHAR(255) NULL,
+    display_name     VARCHAR(255) NOT NULL,
+    avatar_url       VARCHAR(500) NULL,
+    is_active        TINYINT(1) NOT NULL DEFAULT 1,
+    last_login_at    TIMESTAMP NULL DEFAULT NULL,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_provider_subject (provider, provider_subject)
 );

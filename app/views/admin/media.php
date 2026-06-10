@@ -11,7 +11,7 @@ ob_start();
         </div>
         <div style="display:flex;gap:0.8rem;align-items:center">
             <span class="admin-hint"><?= count($files) ?> file<?= count($files) !== 1 ? 's' : '' ?></span>
-            <button type="button" class="admin-btn" id="media-new-image-btn">+ New Image</button>
+            <button type="button" class="admin-btn" id="media-new-image-btn">+ New Asset</button>
         </div>
     </div>
 
@@ -33,12 +33,17 @@ ob_start();
                              data-id="<?= (int) $f['id'] ?>"
                              data-mime="<?= htmlspecialchars($f['mime_type'] ?? '') ?>"
                              data-date="<?= date('Y-m-d', strtotime($f['created_at'])) ?>"
+                             data-size="<?= (int) ($f['byte_size'] ?? 0) ?>"
                              aria-label="Select asset <?= (int) $f['id'] ?>, <?= htmlspecialchars($f['mime_type'] ?? 'unknown type') ?>">
                             <span class="media-card-thumb">
-                                <img src="/image/<?= (int) $f['id'] ?>"
-                                     alt=""
-                                     loading="lazy"
-                                     onerror="this.parentElement.classList.add('media-thumb-missing')">
+                                <?php if (str_starts_with((string) ($f['mime_type'] ?? ''), 'video/')): ?>
+                                    <video src="/media/<?= (int) $f['id'] ?>" muted preload="metadata"></video>
+                                <?php else: ?>
+                                    <img src="/image/<?= (int) $f['id'] ?>"
+                                         alt=""
+                                         loading="lazy"
+                                         onerror="this.parentElement.classList.add('media-thumb-missing')">
+                                <?php endif ?>
                             </span>
                             <span class="media-card-meta">
                                 <span class="media-card-id">Asset #<?= (int) $f['id'] ?></span>
@@ -56,7 +61,7 @@ ob_start();
                 <h2 class="admin-subheading">Selected Asset</h2>
                 <span class="admin-hint">Preview, copy, or remove.</span>
             </div>
-            <div class="media-details-preview">
+            <div class="media-details-preview" id="details-preview-host">
                 <img id="details-preview-img" class="is-hidden" src="" alt="">
             </div>
 
@@ -77,6 +82,10 @@ ob_start();
                     <div class="media-meta-row">
                         <span class="media-meta-label">Uploaded</span>
                         <span class="media-meta-value" id="meta-date">—</span>
+                    </div>
+                    <div class="media-meta-row">
+                        <span class="media-meta-label">Size</span>
+                        <span class="media-meta-value" id="meta-size">—</span>
                     </div>
                 </div>
 
@@ -118,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const metaId = document.getElementById('meta-id');
     const metaMime = document.getElementById('meta-mime');
     const metaDate = document.getElementById('meta-date');
+    const metaSize = document.getElementById('meta-size');
     const inputUrl = document.getElementById('input-url');
     const inputHtml = document.getElementById('input-html');
     const trashForm = document.getElementById('action-trash-form');
@@ -125,6 +135,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const placeholderText = document.getElementById('details-placeholder');
     const contentArea = document.getElementById('details-content-area');
     const copyStatus = document.getElementById('media-copy-status');
+    const previewHost = document.getElementById('details-preview-host');
+
+    function formatBytes(bytes) {
+        const value = Number(bytes || 0);
+        if (!value) return '—';
+        if (value < 1024) return `${value} B`;
+        if (value < 1048576) return `${(value / 1024).toFixed(1)} KB`;
+        return `${(value / 1048576).toFixed(2)} MB`;
+    }
+
+    function setPreview(card, assetUrl) {
+        previewHost.querySelectorAll('video.dynamic-media-preview').forEach(node => node.remove());
+        previewImg.classList.add('is-hidden');
+        previewImg.removeAttribute('src');
+
+        if ((card.dataset.mime || '').startsWith('video/')) {
+            const video = document.createElement('video');
+            video.className = 'dynamic-media-preview';
+            video.src = assetUrl;
+            video.controls = true;
+            video.preload = 'metadata';
+            previewHost.appendChild(video);
+            return;
+        }
+
+        previewImg.src = `/image/${card.dataset.id}`;
+        previewImg.alt = `Preview of asset ${card.dataset.id}`;
+        previewImg.classList.remove('is-hidden');
+    }
 
     function selectCard(card) {
         cards.forEach(item => item.classList.remove('active'));
@@ -133,18 +172,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = card.dataset.id;
         const mime = card.dataset.mime;
         const date = card.dataset.date;
-        const imgUrl = `/image/${id}`;
-
-        previewImg.src = imgUrl;
-        previewImg.alt = `Preview of asset ${id}`;
-        previewImg.classList.remove('is-hidden');
+        const assetUrl = `/media/${id}`;
+        setPreview(card, assetUrl);
 
         metaId.textContent = id;
         metaMime.textContent = mime;
         metaDate.textContent = date;
+        metaSize.textContent = formatBytes(card.dataset.size);
 
-        inputUrl.value = window.location.origin + imgUrl;
-        inputHtml.value = `<img src="${imgUrl}" alt="">`;
+        inputUrl.value = window.location.origin + assetUrl;
+        inputHtml.value = mime.startsWith('video/')
+            ? `<video src="${assetUrl}" controls preload="metadata"></video>`
+            : `<img src="/image/${id}" alt="">`;
 
         trashForm.action = `/admin/media/${id}/trash`;
         destroyForm.action = `/admin/media/${id}/destroy`;
@@ -205,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newImageBtn = document.getElementById('media-new-image-btn');
     if (newImageBtn) {
         newImageBtn.addEventListener('click', () => {
-            if (window.openMediaPicker) window.openMediaPicker(null, 'upload');
+            if (window.openMediaPicker) window.openMediaPicker(null, 'upload', { mode: 'media' });
         });
     }
 });

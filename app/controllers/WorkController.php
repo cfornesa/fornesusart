@@ -12,7 +12,10 @@ class WorkController
             require dirname(__DIR__) . '/views/404.php';
             return;
         }
-        $pieceState = Artwork::inspectPiece($artwork);
+        $mediaItems = $artwork['media_items'] ?? Artwork::resolvedMediaItems($artwork);
+        $pieceState = $mediaItems !== []
+            ? ['valid' => true, 'message' => 'Rendering artwork carousel.']
+            : Artwork::inspectPiece($artwork);
         require dirname(__DIR__) . '/views/work.php';
     }
 }
