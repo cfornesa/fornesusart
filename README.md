@@ -10,6 +10,15 @@ php -c php.dev.ini -S localhost:8000 -t public public/index.php
 
 This starts PHP's built-in server with the router argument and a repo-local PHP config that raises upload limits for the app's short-video workflow. The site runs at `http://localhost:8000`.
 
+## GitHub Actions
+
+Two GitHub Actions workflows are intentionally tracked separately:
+
+- `.github/workflows/deploy.yml` handles deployment to Hostinger. It runs on pushes to `main` and also exposes `workflow_dispatch` so deployment can be triggered manually from the Actions tab.
+- `.github/workflows/feed-refresh.yml` handles the scheduled feed refresh job and its manual refresh trigger.
+
+If deployment ever appears to "stop working" because `deploy.yml` was overwritten or replaced, restoring these two workflow files and pushing that change to `main` re-registers the workflows for future runs. This restores GitHub's ability to discover and trigger the deploy workflow again, but it does not guarantee FTP connectivity or a successful deploy run; FTP success still depends on the external host, secrets, and network path at runtime.
+
 ## Requirements
 
 - PHP 8.1+

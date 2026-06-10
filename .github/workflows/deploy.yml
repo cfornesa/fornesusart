@@ -1,47 +1,75 @@
-name: Scheduled feed refresh
-
-# Hits POST /api/feed-sources/refresh on the deployed app on a schedule
-# so new items from subscribed RSS/Atom sources land in /admin/pending
-# without anyone clicking "Refresh all" in /admin/feeds.
-#
-# Required repo secrets (Settings → Secrets and variables → Actions):
-#   CRON_SECRET      — must match the API server's CRON_SECRET env var.
-#   PUBLIC_SITE_URL  — fully-qualified origin of the deployed app
-#                      (e.g. https://yourdomain.com). No trailing slash.
-#
-# This workflow is provider-neutral — it works whether the deployed
-# app is on Replit, Hostinger, a VPS, or anywhere else, because all it
-# does is HTTP POST.
-#
-# To disable, delete this file or comment out the `schedule:` block.
-# To trigger manually, use the "Run workflow" button (workflow_dispatch).
+name: Deploy to Hostinger
 
 on:
-  schedule:
-    # Hourly. Daily/weekly feed sources self-throttle via isSourceDue,
-    # so a faster cron just no-ops on sources that aren't due yet.
-    - cron: "0 * * * *"
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Bypass per-source cadence gate (?force=1)"
-        type: boolean
-        default: false
 
 jobs:
-  refresh:
-    name: Refresh subscribed feeds
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
     steps:
-      - name: Check out repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Hit /api/feed-sources/refresh
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL }}
-          FORCE: ${{ inputs.force == true && '1' || '' }}
-        run: bash scripts/scheduled-feed-refresh.sh
+      - name: FTP Deploy (attempt 1)
+        id: ftp_deploy_1
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        continue-on-error: true
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.claude/**
+            **/.agents/**
+            **/.gemini/**
+            .env
+            public/debug_auth.php
+
+      - name: Wait before retry 1
+        if: steps.ftp_deploy_1.outcome == 'failure'
+        run: sleep 30
+
+      - name: FTP Deploy (attempt 2)
+        id: ftp_deploy_2
+        if: steps.ftp_deploy_1.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        continue-on-error: true
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.claude/**
+            **/.agents/**
+            **/.gemini/**
+            .env
+            public/debug_auth.php
+
+      - name: Wait before retry 2
+        if: steps.ftp_deploy_1.outcome == 'failure' && steps.ftp_deploy_2.outcome == 'failure'
+        run: sleep 30
+
+      - name: FTP Deploy (attempt 3)
+        id: ftp_deploy_3
+        if: steps.ftp_deploy_1.outcome == 'failure' && steps.ftp_deploy_2.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.claude/**
+            **/.agents/**
+            **/.gemini/**
+            .env
+            public/debug_auth.php
